@@ -23,6 +23,7 @@ export default function HomePage() {
       state: {
         solve: progress.solve,
         problem: progress.problem,
+        problemId: progress.problemId,
         resumeStep: progress.currentStep,
         resumeHintLevel: progress.hintLevel,
         resumeMessages: progress.messages,

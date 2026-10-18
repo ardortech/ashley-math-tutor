@@ -3,6 +3,7 @@ const PIN_KEY = "mathtutor_pin";
 const SOLVE_LOG_KEY = "mathtutor_solvelog";
 const DEVICE_ID_KEY = "mathtutor_device_id";
 const PROGRESS_KEY = "mathtutor_progress";
+const SCORED_KEY = "mathtutor_scored";
 
 export interface PetState {
   schemaVersion: 1;
@@ -133,6 +134,7 @@ export interface ChatMessage {
 }
 
 export interface GuidedProgress {
+  problemId: string;
   problem: { problem_latex: string; problem_text: string; topic: string };
   solve: {
     overview_hint: string;
@@ -144,6 +146,7 @@ export interface GuidedProgress {
   hintLevel: number;
   messages: ChatMessage[];
   usedHints: boolean;
+  attempt: number;
 }
 
 export function getProgress(): GuidedProgress | null {
@@ -159,5 +162,18 @@ export function clearProgress(): void {
     localStorage.removeItem(PROGRESS_KEY);
   } catch {
     // storage unavailable
+  }
+}
+
+export function isScoredProblem(problemId: string): boolean {
+  const scored = safeGet<string[]>(SCORED_KEY) ?? [];
+  return scored.includes(problemId);
+}
+
+export function markProblemScored(problemId: string): void {
+  const scored = safeGet<string[]>(SCORED_KEY) ?? [];
+  if (!scored.includes(problemId)) {
+    scored.push(problemId);
+    safeSet(SCORED_KEY, scored);
   }
 }

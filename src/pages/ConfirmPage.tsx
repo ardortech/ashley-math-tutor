@@ -6,7 +6,7 @@ import TiaoTiaoHeadHappy from "../components/pet/TiaoTiaoHeadHappy";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
 import { analyzeImage, solveProblem, ApiError } from "../lib/api";
 import type { AnalyzeProblem, SolveResult } from "../lib/api";
-import { saveProgress, clearProgress } from "../lib/storage";
+import { saveProgress } from "../lib/storage";
 
 type Phase =
   | { step: "analyzing" }
@@ -14,7 +14,7 @@ type Phase =
   | { step: "confirm"; problem: AnalyzeProblem }
   | { step: "editing"; problem: AnalyzeProblem; editText: string }
   | { step: "solving" }
-  | { step: "overview"; solve: SolveResult; problem: AnalyzeProblem }
+  | { step: "overview"; solve: SolveResult; problem: AnalyzeProblem; problemId: string }
   | { step: "error"; message: string };
 
 export default function ConfirmPage() {
@@ -66,7 +66,8 @@ export default function ConfirmPage() {
       setPhase({ step: "solving" });
       solveProblem(problem.problem_text)
         .then((solve) => {
-          setPhase({ step: "overview", solve, problem });
+          const problemId = crypto.randomUUID();
+          setPhase({ step: "overview", solve, problem, problemId });
         })
         .catch((err: unknown) => {
           const msg =
@@ -295,15 +296,21 @@ export default function ConfirmPage() {
             <button
               onClick={() => {
                 saveProgress({
+                  problemId: phase.problemId,
                   problem: phase.problem,
                   solve: phase.solve,
                   currentStep: 0,
                   hintLevel: 0,
                   messages: [],
                   usedHints: true,
+                  attempt: 1,
                 });
                 navigate("/guided", {
-                  state: { solve: phase.solve, problem: phase.problem },
+                  state: {
+                    solve: phase.solve,
+                    problem: phase.problem,
+                    problemId: phase.problemId,
+                  },
                 });
               }}
               className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
@@ -315,12 +322,22 @@ export default function ConfirmPage() {
             </button>
             <button
               onClick={() => {
-                clearProgress();
+                saveProgress({
+                  problemId: phase.problemId,
+                  problem: phase.problem,
+                  solve: phase.solve,
+                  currentStep: 0,
+                  hintLevel: 0,
+                  messages: [],
+                  usedHints: false,
+                  attempt: 1,
+                });
                 navigate("/validate", {
                   state: {
                     solve: phase.solve,
                     problem: phase.problem,
                     usedHints: false,
+                    problemId: phase.problemId,
                   },
                 });
               }}

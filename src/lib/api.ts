@@ -97,3 +97,28 @@ export async function requestHint(req: HintRequest): Promise<HintResult> {
   });
   return res.json() as Promise<HintResult>;
 }
+
+export interface ValidateRequest {
+  image: string;
+  problem_text: string;
+  final_answer: string;
+  solution_steps: string[];
+  attempt: number;
+}
+
+export interface ValidateResult {
+  result: "correct" | "partially_correct" | "incorrect" | "unreadable";
+  lines: string[];
+  first_error_line_index: number | null;
+  related_step_index: number | null;
+  feedback: string;
+}
+
+export async function validateWork(req: ValidateRequest): Promise<ValidateResult> {
+  const res = await apiFetch("/api/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  return res.json() as Promise<ValidateResult>;
+}
