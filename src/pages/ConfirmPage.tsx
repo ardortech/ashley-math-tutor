@@ -6,6 +6,7 @@ import TiaoTiaoHeadHappy from "../components/pet/TiaoTiaoHeadHappy";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
 import { analyzeImage, solveProblem, ApiError } from "../lib/api";
 import type { AnalyzeProblem, SolveResult } from "../lib/api";
+import { saveProgress, clearProgress } from "../lib/storage";
 
 type Phase =
   | { step: "analyzing" }
@@ -292,23 +293,42 @@ export default function ConfirmPage() {
           {/* Action buttons */}
           <div className="space-y-3">
             <button
-              disabled
+              onClick={() => {
+                saveProgress({
+                  problem: phase.problem,
+                  solve: phase.solve,
+                  currentStep: 0,
+                  hintLevel: 0,
+                  messages: [],
+                  usedHints: true,
+                });
+                navigate("/guided", {
+                  state: { solve: phase.solve, problem: phase.problem },
+                });
+              }}
               className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
                 shadow-[0_8px_0_0_var(--color-primary-pressed)]
-                opacity-50 cursor-not-allowed"
+                active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
+                transition-all"
             >
               帶我一步一步來
             </button>
             <button
-              disabled
+              onClick={() => {
+                clearProgress();
+                navigate("/validate", {
+                  state: {
+                    solve: phase.solve,
+                    problem: phase.problem,
+                    usedHints: false,
+                  },
+                });
+              }}
               className="w-full rounded-[24px] border-2 border-primary bg-primary-soft px-6 py-5 text-lg font-bold text-primary
-                opacity-50 cursor-not-allowed"
+                active:bg-primary/10 transition-colors"
             >
               我知道怎麼做了！
             </button>
-            <p className="text-center text-xs text-muted">
-              （步驟引導和跳過功能將在 Phase 3、4 開放）
-            </p>
           </div>
 
           <button
