@@ -46,41 +46,51 @@ A student photographs a math problem → the AI tutor guides her **one step at a
 
 ### 3.3 引導解題 (Guided steps — the heart of the app)
 
-**Two-endpoint flow:**
+**Three-endpoint flow:**
 1. `/api/analyze` — takes the photo, returns `{ problems: [{ problem_latex, problem_text, topic }] }` (always an array, even for a single problem). Fast: only transcribes, doesn't solve.
-2. `/api/solve` — takes the **confirmed problem text** (no photo), returns `{ overview_hint, topic, final_answer, solution_steps, hint_ladder }`. Called only after she confirms or edits the problem.
+2. `/api/solve` — takes the **confirmed problem text** (no photo), returns `{ overview_hint, topic, final_answer, solution_steps }`. Each step is a one-sentence description (e.g. "把含 x 的項移到等號左邊"). Called only after she confirms or edits the problem. Does **not** generate hints — those come from `/api/hint` on demand.
+3. `/api/hint` — generates a single hint on demand. Takes `{ problem_text, solution_steps, step_index, hint_level (1|2|3), final_answer, student_thought?, recent_messages? }`. Returns `{ message }`. Server-side answer leak check: if the response contains the final answer, retry once; if still leaked, return a safe fallback message.
 
 Keep `final_answer` and `solution_steps` in app state but **never render them** until she has solved it.
 
 **Overview hint (大方向提示):**
 After `/api/solve` returns, before showing step 1, 跳跳 says the `overview_hint`: 1–2 sentences naming the problem type and goal, with **no numbers, no computation, no answer**. Example: 「這是一元一次方程式喔！我們的目標是讓 $x$ 自己站在等號一邊。想想看，要先處理什麼呢？」
 Two buttons below:
-- 「帶我一步一步來」→ enter step-by-step guidance
+- 「帶我一步一步來」→ enter step-by-step guidance (sets `usedHints = true`)
 - 「我知道怎麼做了！」→ skip to 拍解答 (see **Skip** below)
 
 **Step-by-step guidance:**
-The UI shows **one step at a time**, with buttons after each:
-- 「我懂了，我來試試」 → go work on paper
-- 「再給我一點提示」 → next hint level
-- 「我還是卡住了」 → show this step worked out, then stop again at the next step
-- 「我知道怎麼做了！」→ skip remaining steps, go to 拍解答
+The UI shows **one step at a time** in a chat-style interface (跳跳 avatar left, her messages right in primary blue). On entering each step, 跳跳 automatically shows the level 1 hint (引導問題) via `/api/hint`.
+
+Bottom action area (top to bottom):
+- 「我的想法是…」 text input — she types her idea, 跳跳 responds to *her* reasoning via `/api/hint`
+- 「再給我一點提示」 → escalate to next hint level (2 方向, then 3 示範)
+- 「我還是卡住了」 → jump directly to level 3 示範
+- 「這步做好了，下一步 →」 (primary button, always visible) — she presses when she's done with the step, advances to the next step
+- 「我知道怎麼做了！」 (small text link in problem header) → skip remaining steps, go to 拍解答
+
+After all steps are completed, 跳跳 says 「全部步驟都走完了！把你的算式拍下來給我看看吧！」 and shows a big 「📷 拍下我的算式」 button (no auto-navigate).
 
 **Hint ladder per step (escalate only when she asks):**
-1. **提問** — a guiding question. e.g. 「題目要我們求什麼？」「你覺得要先處理括號還是先移項？」
-2. **方向** — name the strategy. e.g. 「試試看把有 x 的都放到等號左邊。」
-3. **示範一小步** — do just this one step, then hand it back: 「接下來換你！」
+1. **提問** (level 1, auto-shown) — a guiding question. e.g. 「題目要我們求什麼？」「你覺得要先處理括號還是先移項？」
+2. **方向** (level 2) — name the strategy. e.g. 「試試看把有 x 的都放到等號左邊。」
+3. **示範一小步** (level 3) — do just this one step, then hand it back: 「接下來換你！」
 
 **Skip (跳過步驟):**
-- 「我知道怎麼做了！」is available on the overview screen and every step screen.
+- 「我知道怎麼做了！」is available on the overview screen and every step screen (small text link in problem header).
 - Pressing it skips directly to 「拍下我的算式」→ same validation flow.
-- Track `usedHints: boolean` per problem. First attempt correct **and** `usedHints === false` → 點心 +2; otherwise +1.
+- `usedHints` definition: pressing 「帶我一步一步來」from the overview sets `usedHints = true`. Only pressing 「我知道怎麼做了！」from the overview **and** answering correctly on the first try earns 點心 +2; otherwise +1.
 - `solveLog` entries include the `usedHints` field.
 
+**Progress persistence:**
+- Current problem state (problem, solve result, currentStep, hintLevel, messages, usedHints) is saved to `localStorage` on every state change.
+- On returning to the home screen, if saved progress exists, 跳跳 asks 「要繼續剛剛那題嗎？」 with 繼續/放棄 buttons.
+
 Rules:
-- Never reveal the final answer during guidance.
+- Never reveal the final answer during guidance. `/api/hint` checks server-side.
 - Max 2–3 short sentences per message.
 - Always end with a question or a clear "your turn" so she does the thinking.
-- Optional text box: 「我的想法是…」 — she can type her own idea and the AI responds to *her* reasoning.
+- All math in chat uses MathText (KaTeX rendering).
 
 ### 3.4 拍解答 → 批改 (Photograph work → validate)
 - Button: 「📷 拍下我的算式」

@@ -168,7 +168,6 @@ export default function GuidedPage() {
 
   const canAskMore = hintLevel > 0 && hintLevel < 3 && !loading;
   const canStuck = hintLevel > 0 && hintLevel < 3 && !loading;
-  const showNextStep = hintLevel >= 3 && !allDone;
 
   return (
     <div className="min-h-dvh bg-bg flex flex-col">
@@ -196,7 +195,7 @@ export default function GuidedPage() {
           {!allDone && (
             <button
               onClick={handleSkip}
-              className="text-xs text-primary font-medium whitespace-nowrap pt-0.5"
+              className="text-xs text-primary font-medium whitespace-nowrap min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2"
             >
               我知道怎麼做了！
             </button>
@@ -332,27 +331,17 @@ export default function GuidedPage() {
               </button>
             </div>
 
-            {/* Primary button */}
-            {showNextStep ? (
-              <button
-                onClick={handleNextStep}
-                className="w-full rounded-[24px] bg-primary px-6 py-4 text-base font-bold text-white
-                  shadow-[0_8px_0_0_var(--color-primary-pressed)]
-                  active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
-                  transition-all"
-              >
-                這步做好了，下一步 →
-              </button>
-            ) : (
-              <button
-                onClick={handleTakePhoto}
-                disabled={loading}
-                className="w-full rounded-[24px] border-2 border-primary bg-primary-soft px-6 py-4 text-base font-bold text-primary
-                  disabled:opacity-40 active:bg-primary/10 transition-colors"
-              >
-                我懂了！拍下我的算式
-              </button>
-            )}
+            {/* Primary button — always available */}
+            <button
+              onClick={handleNextStep}
+              disabled={loading}
+              className="w-full rounded-[24px] bg-primary px-6 py-4 text-base font-bold text-white
+                shadow-[0_8px_0_0_var(--color-primary-pressed)]
+                active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
+                disabled:opacity-40 transition-all"
+            >
+              這步做好了，下一步 →
+            </button>
           </>
         )}
       </div>

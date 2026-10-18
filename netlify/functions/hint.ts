@@ -73,41 +73,62 @@ ${input.solution_steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}
   return prompt;
 }
 
-function containsFinalAnswer(message: string, finalAnswer: string): boolean {
-  const cleaned = finalAnswer
+function stripLatex(s: string): string {
+  return s
     .replace(/\$/g, "")
     .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "$1/$2")
-    .replace(/\\?[a-z]+/gi, "")
-    .replace(/[{}\\]/g, "")
+    .replace(/\\[a-z]+/gi, "")
+    .replace(/[{}]/g, "")
     .trim();
+}
 
-  const patterns: string[] = [];
+function extractAnswerValue(finalAnswer: string): { variable: string; value: string } | null {
+  const stripped = stripLatex(finalAnswer);
+  const m = stripped.match(/^([a-zA-Z])\s*[=＝]\s*(.+)$/);
+  if (m) return { variable: m[1]!, value: m[2]!.trim() };
+  const m2 = stripped.match(/^[=＝]\s*(.+)$/);
+  if (m2) return { variable: "", value: m2[1]!.trim() };
+  if (stripped) return { variable: "", value: stripped };
+  return null;
+}
 
-  if (cleaned) patterns.push(cleaned.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+export function containsFinalAnswer(
+  message: string,
+  finalAnswer: string,
+  problemText: string,
+): boolean {
+  const parsed = extractAnswerValue(finalAnswer);
+  if (!parsed) return false;
 
-  const eqMatch = finalAnswer.match(/[=＝]\s*(.+)/);
-  if (eqMatch) {
-    const val = eqMatch[1]!
-      .replace(/\$/g, "")
-      .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "$1/$2")
-      .replace(/\\?[a-z]+/gi, "")
-      .replace(/[{}\\]/g, "")
-      .trim();
-    if (val) patterns.push(val.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const { variable, value } = parsed;
+  const escapedVal = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escapedVal) return false;
+
+  const msgClean = stripLatex(message);
+  const probClean = stripLatex(problemText);
+
+  // Check 1: "variable = value" pattern (e.g. x = 8, x=8)
+  if (variable) {
+    const varEq = new RegExp(
+      `${variable.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[=＝]\\s*${escapedVal}(?![0-9])`,
+    );
+    if (varEq.test(msgClean)) return true;
   }
 
-  if (patterns.length === 0) return false;
-
-  const answerRegex = new RegExp(
-    patterns
-      .filter((p) => p.length >= 1)
-      .map((p) => `(?:答案|最終|最後|結果|所以)?\\s*(?:[=＝]\\s*)?${p}`)
-      .join("|"),
+  // Check 2: keyword + value (答案/所以/最後/結果 followed by the value)
+  const kwPattern = new RegExp(
+    `(?:答案|所以|最後|結果)\\s*(?:是|為|[=＝:])?\\s*${escapedVal}(?![0-9])`,
   );
+  if (kwPattern.test(msgClean)) return true;
 
-  return answerRegex.test(
-    message.replace(/\$/g, "").replace(/\\?[a-z]+/gi, "").replace(/[{}\\]/g, ""),
-  );
+  // Check 3: bare value — only if it does NOT appear in the problem text
+  const bareInProblem = new RegExp(`(?<![0-9])${escapedVal}(?![0-9])`).test(probClean);
+  if (!bareInProblem) {
+    const bareInMsg = new RegExp(`(?<![0-9])${escapedVal}(?![0-9])`).test(msgClean);
+    if (bareInMsg) return true;
+  }
+
+  return false;
 }
 
 async function callHint(input: z.infer<typeof HintRequest>): Promise<string> {
@@ -163,11 +184,11 @@ export default async function handler(request: Request, _context: Context) {
   try {
     message = await callHint(input);
 
-    if (containsFinalAnswer(message, input.final_answer)) {
+    if (containsFinalAnswer(message, input.final_answer, input.problem_text)) {
       console.log(`[hint] answer leak detected, retrying`);
       message = await callHint(input);
 
-      if (containsFinalAnswer(message, input.final_answer)) {
+      if (containsFinalAnswer(message, input.final_answer, input.problem_text)) {
         console.log(`[hint] answer leak on retry, using safe fallback`);
         message = SAFE_FALLBACK;
       }
