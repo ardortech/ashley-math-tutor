@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #F3F6FB;
+  --color-card: #FFFFFF;
+  --color-card-border: #DCE3EE;
+  --color-ink: #1B2638;
+  --color-muted: #4A5568;
+
+  --color-primary: #2457C5;
+  --color-primary-pressed: #173E94;
+  --color-primary-soft: #E3EBFA;
+
+  --color-pet: #F08A24;
+  --color-pet-soft: #FFF1DC;
+  --color-pet-celebration: #FFF6E8;
+
+  --color-success: #1F7A4D;
+  --color-success-soft: #E2F4E9;
+
+  --color-fix: #B4441E;
+  --color-fix-soft: #FDEBE3;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes pet-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pet-blink {
+  0%, 92%, 100% { opacity: 1; }
+  95%, 97% { opacity: 0; }
+}
+
+.pet-bounce {
+  animation: pet-bounce 3s ease-in-out infinite;
+}
+
+.pet-eyes {
+  animation: pet-blink 4s ease-in-out infinite;
+}
