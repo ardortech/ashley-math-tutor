@@ -5,6 +5,8 @@ import PinScreen from "./components/PinScreen";
 import HomePage from "./pages/HomePage";
 import CapturePage from "./pages/CapturePage";
 import ConfirmPage from "./pages/ConfirmPage";
+import GuidedPage from "./pages/GuidedPage";
+import ValidatePage from "./pages/ValidatePage";
 
 export default function App() {
   const [authed, setAuthed] = useState(() => !!getPin());
@@ -24,6 +26,8 @@ export default function App() {
       <Route path="/" element={authed ? <HomePage /> : pinScreen} />
       <Route path="/capture" element={authed ? <CapturePage /> : pinScreen} />
       <Route path="/confirm" element={authed ? <ConfirmPage /> : pinScreen} />
+      <Route path="/guided" element={authed ? <GuidedPage /> : pinScreen} />
+      <Route path="/validate" element={authed ? <ValidatePage /> : pinScreen} />
     </Routes>
   );
 }

@@ -55,7 +55,20 @@ export interface SolveResult {
   topic: string;
   final_answer: string;
   solution_steps: string[];
-  hint_ladder: { question: string; direction: string; demo: string }[];
+}
+
+export interface HintResult {
+  message: string;
+}
+
+export interface HintRequest {
+  problem_text: string;
+  solution_steps: string[];
+  step_index: number;
+  hint_level: 1 | 2 | 3;
+  final_answer: string;
+  student_thought?: string;
+  recent_messages?: { role: "tutor" | "student"; text: string }[];
 }
 
 export async function analyzeImage(imageBase64: string): Promise<AnalyzeResult> {
@@ -74,4 +87,13 @@ export async function solveProblem(problemText: string): Promise<SolveResult> {
     body: JSON.stringify({ problem_text: problemText }),
   });
   return res.json() as Promise<SolveResult>;
+}
+
+export async function requestHint(req: HintRequest): Promise<HintResult> {
+  const res = await apiFetch("/api/hint", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  return res.json() as Promise<HintResult>;
 }

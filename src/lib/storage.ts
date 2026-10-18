@@ -2,6 +2,7 @@ const PET_KEY = "mathtutor_pet";
 const PIN_KEY = "mathtutor_pin";
 const SOLVE_LOG_KEY = "mathtutor_solvelog";
 const DEVICE_ID_KEY = "mathtutor_device_id";
+const PROGRESS_KEY = "mathtutor_progress";
 
 export interface PetState {
   schemaVersion: 1;
@@ -121,6 +122,41 @@ export function savePin(pin: string): void {
 export function clearPin(): void {
   try {
     localStorage.removeItem(PIN_KEY);
+  } catch {
+    // storage unavailable
+  }
+}
+
+export interface ChatMessage {
+  role: "tutor" | "student";
+  text: string;
+}
+
+export interface GuidedProgress {
+  problem: { problem_latex: string; problem_text: string; topic: string };
+  solve: {
+    overview_hint: string;
+    topic: string;
+    final_answer: string;
+    solution_steps: string[];
+  };
+  currentStep: number;
+  hintLevel: number;
+  messages: ChatMessage[];
+  usedHints: boolean;
+}
+
+export function getProgress(): GuidedProgress | null {
+  return safeGet<GuidedProgress>(PROGRESS_KEY);
+}
+
+export function saveProgress(progress: GuidedProgress): void {
+  safeSet(PROGRESS_KEY, progress);
+}
+
+export function clearProgress(): void {
+  try {
+    localStorage.removeItem(PROGRESS_KEY);
   } catch {
     // storage unavailable
   }
