@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Cropper, { type Area } from "react-easy-crop";
 import { loadImage, compressImage, bitmapToObjectUrl } from "../lib/imageUtils";
 
@@ -21,12 +22,14 @@ async function getCroppedBlob(
 }
 
 export default function CaptureScreen({ onBack }: CaptureScreenProps) {
+  const navigate = useNavigate();
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [previewBase64, setPreviewBase64] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +59,16 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
       const compressed = await compressImage(bitmap);
       bitmap.close();
       const url = URL.createObjectURL(compressed);
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.readAsDataURL(compressed);
+      });
       setPreview(url);
+      setPreviewBase64(base64);
       setImageSrc(null);
     } finally {
       setProcessing(false);
@@ -65,9 +77,17 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
 
   const handleRetake = useCallback(() => {
     setPreview(null);
+    setPreviewBase64(null);
     setImageSrc(null);
     inputRef.current?.click();
   }, []);
+
+  const handleSend = useCallback(() => {
+    if (!previewBase64 || !preview) return;
+    navigate("/confirm", {
+      state: { imageBase64: previewBase64, imageUrl: preview },
+    });
+  }, [previewBase64, preview, navigate]);
 
   // No image selected yet — show capture button
   if (!imageSrc && !preview) {
@@ -165,13 +185,13 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
           重新拍攝
         </button>
         <button
+          onClick={handleSend}
           className="flex-1 rounded-2xl bg-primary px-4 py-4 text-sm font-bold text-white
             shadow-[0_6px_0_0_var(--color-primary-pressed)]
             active:translate-y-1 active:shadow-[0_3px_0_0_var(--color-primary-pressed)]
-            transition-all opacity-50 cursor-not-allowed"
-          disabled
+            transition-all"
         >
-          送出（Phase 2）
+          送出分析
         </button>
       </div>
       <button onClick={onBack} className="mt-4 text-muted text-sm text-center">

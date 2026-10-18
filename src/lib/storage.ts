@@ -1,6 +1,7 @@
 const PET_KEY = "mathtutor_pet";
 const PIN_KEY = "mathtutor_pin";
 const SOLVE_LOG_KEY = "mathtutor_solvelog";
+const DEVICE_ID_KEY = "mathtutor_device_id";
 
 export interface PetState {
   schemaVersion: 1;
@@ -15,6 +16,14 @@ export interface PetState {
 export interface SolveEntry {
   date: string;
   topic: string;
+  usedHints: boolean;
+}
+
+function localDateString(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 const DEFAULT_PET: PetState = {
@@ -61,19 +70,36 @@ export function saveSolveLog(log: SolveEntry[]): void {
   safeSet(SOLVE_LOG_KEY, log);
 }
 
+export function addSolveEntry(topic: string, usedHints: boolean): void {
+  const log = getSolveLog();
+  log.push({ date: localDateString(), topic, usedHints });
+  saveSolveLog(log);
+}
+
 export function getTodayCount(): number {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateString();
   return getSolveLog().filter((e) => e.date === today).length;
 }
 
 export function getWeekCount(): number {
   const now = new Date();
   const dayOfWeek = now.getDay() || 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - dayOfWeek + 1);
-  monday.setHours(0, 0, 0, 0);
-  const mondayStr = monday.toISOString().slice(0, 10);
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
+  const mondayStr = localDateString(monday);
   return getSolveLog().filter((e) => e.date >= mondayStr).length;
+}
+
+export function getDeviceId(): string {
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return "unknown";
+  }
 }
 
 export function getPin(): string | null {
