@@ -17,6 +17,8 @@ interface LocationState {
   resumeHintLevel?: number;
   resumeMessages?: ChatMessage[];
   resumeUsedHints?: boolean;
+  practiceMode?: boolean;
+  practiceIndex?: number;
 }
 
 export default function GuidedPage() {
@@ -29,6 +31,8 @@ export default function GuidedPage() {
 
   const progressData = getProgress();
   const problemId = state?.problemId ?? progressData?.problemId ?? "";
+  const practiceMode = state?.practiceMode ?? false;
+  const practiceIndex = state?.practiceIndex ?? 0;
 
   const [currentStep, setCurrentStep] = useState(state?.resumeStep ?? 0);
   const [hintLevel, setHintLevel] = useState(state?.resumeHintLevel ?? 0);
@@ -53,9 +57,10 @@ export default function GuidedPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Persist progress
+  // Persist progress (skip in practice mode to not overwrite original problem)
   useEffect(() => {
     if (!solve || !problem) return;
+    if (practiceMode) return;
     const prev = getProgress();
     saveProgress({
       problemId: problemId || prev?.problemId || "",
@@ -67,7 +72,7 @@ export default function GuidedPage() {
       usedHints,
       attempt: prev?.attempt ?? 1,
     });
-  }, [currentStep, hintLevel, messages, usedHints, solve, problem, problemId]);
+  }, [currentStep, hintLevel, messages, usedHints, solve, problem, problemId, practiceMode]);
 
   const totalSteps = solve?.solution_steps.length ?? 0;
 
@@ -156,18 +161,22 @@ export default function GuidedPage() {
   }, [currentStep, totalSteps]);
 
   const handleSkip = useCallback(() => {
+    if (practiceMode) {
+      navigate("/practice", { replace: true });
+      return;
+    }
     navigate("/validate", {
       state: { solve, problem, usedHints, problemId },
       replace: true,
     });
-  }, [navigate, solve, problem, usedHints, problemId]);
+  }, [navigate, solve, problem, usedHints, problemId, practiceMode]);
 
   const handleTakePhoto = useCallback(() => {
     navigate("/validate", {
-      state: { solve, problem, usedHints, problemId },
+      state: { solve, problem, usedHints, problemId, practiceMode, practiceIndex },
       replace: true,
     });
-  }, [navigate, solve, problem, usedHints, problemId]);
+  }, [navigate, solve, problem, usedHints, problemId, practiceMode, practiceIndex]);
 
   if (!solve || !problem) return null;
 

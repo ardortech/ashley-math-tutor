@@ -4,6 +4,7 @@ const SOLVE_LOG_KEY = "mathtutor_solvelog";
 const DEVICE_ID_KEY = "mathtutor_device_id";
 const PROGRESS_KEY = "mathtutor_progress";
 const SCORED_KEY = "mathtutor_scored";
+const PRACTICE_KEY = "mathtutor_practice";
 
 export interface PetState {
   schemaVersion: 1;
@@ -175,5 +176,44 @@ export function markProblemScored(problemId: string): void {
   if (!scored.includes(problemId)) {
     scored.push(problemId);
     safeSet(SCORED_KEY, scored);
+  }
+}
+
+export interface VerifiedPracticeProblem {
+  problem_text: string;
+  problem_latex: string;
+  final_answer: string;
+  answer_prefix: string;
+  solve: {
+    overview_hint: string;
+    topic: string;
+    final_answer: string;
+    solution_steps: string[];
+  };
+  problemId: string;
+}
+
+export interface PracticeProgress {
+  originProblemText: string;
+  topic: string;
+  problems: VerifiedPracticeProblem[];
+  currentIndex: number;
+  attempts: number[];
+  completed: boolean[];
+}
+
+export function getPracticeProgress(): PracticeProgress | null {
+  return safeGet<PracticeProgress>(PRACTICE_KEY);
+}
+
+export function savePracticeProgress(progress: PracticeProgress): void {
+  safeSet(PRACTICE_KEY, progress);
+}
+
+export function clearPracticeProgress(): void {
+  try {
+    localStorage.removeItem(PRACTICE_KEY);
+  } catch {
+    // storage unavailable
   }
 }

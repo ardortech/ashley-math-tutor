@@ -7,11 +7,14 @@ import { CLAUDE_MODEL, TUTOR_SYSTEM_PROMPT, TEXTBOOK } from "./lib/config";
 import { containsFinalAnswer } from "./hint";
 
 const ValidateRequest = z.object({
-  image: z.string(),
+  image: z.string().optional(),
+  student_answer: z.string().optional(),
   problem_text: z.string(),
   final_answer: z.string(),
   solution_steps: z.array(z.string()),
   attempt: z.number().int().min(1),
+}).refine((d) => d.image || d.student_answer, {
+  message: "Either image or student_answer is required",
 });
 
 const ValidateResponse = z.object({
@@ -89,12 +92,83 @@ const SAFE_FEEDBACK_INCORRECT =
 const SAFE_FEEDBACK_PARTIAL =
   "答案對了！不過有一行的寫法可以再注意一下喔。";
 
+function buildTextValidatePrompt(input: z.infer<typeof ValidateRequest>): string {
+  const stepsText = input.solution_steps
+    .map((s, i) => `${i + 1}. ${s}`)
+    .join("\n");
+
+  let prompt = `你的任務是批改學生輸入的數學答案。
+
+題目：${input.problem_text}
+
+正確解法步驟：
+${stepsText}
+
+正確最終答案：${input.final_answer}
+
+學生輸入的答案：${input.student_answer}
+
+請比對學生的答案和正確答案是否等值（接受等值的表達方式，例如 $3/2$、$1.5$、$\\frac{3}{2}$ 都一樣）。
+
+判定規則：
+- "correct"：答案正確
+- "incorrect"：答案不正確
+（文字輸入模式不會有 partially_correct 或 unreadable）
+
+`;
+
+  if (input.attempt < 3) {
+    prompt += `feedback 規則（這是第 ${input.attempt} 次嘗試）：
+- 答對了：稱讚她的努力和方法（不要說「你好聰明」）
+- 答錯了：溫和鼓勵她再想想看，不能說出正確答案！`;
+  } else {
+    prompt += `feedback 規則（這是第 ${input.attempt} 次嘗試，可以多給一點幫助）：
+- 答對了：稱讚她的努力和方法
+- 答錯了：溫柔地給一點提示方向`;
+  }
+
+  prompt += `
+
+一次最多 2～3 句話。只用繁體中文和台灣用語。
+
+回傳 JSON：
+{
+  "result": "correct" | "incorrect",
+  "lines": [],
+  "first_error_line_index": null,
+  "related_step_index": null,
+  "feedback": "給她的話"
+}`;
+
+  return prompt;
+}
+
 async function callValidate(
   input: z.infer<typeof ValidateRequest>,
 ): Promise<z.infer<typeof ValidateResponse>> {
   const client = new Anthropic();
-  const userPrompt = buildValidatePrompt(input);
 
+  if (input.student_answer && !input.image) {
+    const userPrompt = buildTextValidatePrompt(input);
+    const response = await client.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 1024,
+      system: TUTOR_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+
+    const text = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+
+    return ValidateResponse.parse(JSON.parse(jsonMatch[0]));
+  }
+
+  const userPrompt = buildValidatePrompt(input);
   const response = await client.messages.create({
     model: CLAUDE_MODEL,
     max_tokens: 2048,
@@ -108,7 +182,7 @@ async function callValidate(
             source: {
               type: "base64",
               media_type: "image/jpeg",
-              data: input.image,
+              data: input.image!,
             },
           },
           { type: "text", text: userPrompt },

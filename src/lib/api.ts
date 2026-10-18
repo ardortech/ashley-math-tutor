@@ -99,7 +99,8 @@ export async function requestHint(req: HintRequest): Promise<HintResult> {
 }
 
 export interface ValidateRequest {
-  image: string;
+  image?: string;
+  student_answer?: string;
   problem_text: string;
   final_answer: string;
   solution_steps: string[];
@@ -121,4 +122,29 @@ export async function validateWork(req: ValidateRequest): Promise<ValidateResult
     body: JSON.stringify(req),
   });
   return res.json() as Promise<ValidateResult>;
+}
+
+export interface PracticeProblem {
+  problem_text: string;
+  problem_latex: string;
+  final_answer: string;
+  answer_prefix: string;
+}
+
+export interface PracticeResult {
+  problems: PracticeProblem[];
+}
+
+export async function generatePractice(req: {
+  problem_text: string;
+  topic: string;
+  count?: number;
+  difficulty?: "same" | "harder";
+}): Promise<PracticeResult> {
+  const res = await apiFetch("/api/practice", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  return res.json() as Promise<PracticeResult>;
 }
