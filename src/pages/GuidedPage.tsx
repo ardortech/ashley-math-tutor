@@ -7,11 +7,12 @@ import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
 import { requestHint, ApiError } from "../lib/api";
 import type { AnalyzeProblem, SolveResult } from "../lib/api";
 import type { ChatMessage } from "../lib/storage";
-import { saveProgress, clearProgress } from "../lib/storage";
+import { saveProgress, getProgress } from "../lib/storage";
 
 interface LocationState {
   solve: SolveResult;
   problem: AnalyzeProblem;
+  problemId?: string;
   resumeStep?: number;
   resumeHintLevel?: number;
   resumeMessages?: ChatMessage[];
@@ -25,6 +26,9 @@ export default function GuidedPage() {
 
   const solve = state?.solve;
   const problem = state?.problem;
+
+  const progressData = getProgress();
+  const problemId = state?.problemId ?? progressData?.problemId ?? "";
 
   const [currentStep, setCurrentStep] = useState(state?.resumeStep ?? 0);
   const [hintLevel, setHintLevel] = useState(state?.resumeHintLevel ?? 0);
@@ -52,15 +56,18 @@ export default function GuidedPage() {
   // Persist progress
   useEffect(() => {
     if (!solve || !problem) return;
+    const prev = getProgress();
     saveProgress({
+      problemId: problemId || prev?.problemId || "",
       problem,
       solve,
       currentStep,
       hintLevel,
       messages,
       usedHints,
+      attempt: prev?.attempt ?? 1,
     });
-  }, [currentStep, hintLevel, messages, usedHints, solve, problem]);
+  }, [currentStep, hintLevel, messages, usedHints, solve, problem, problemId]);
 
   const totalSteps = solve?.solution_steps.length ?? 0;
 
@@ -149,20 +156,18 @@ export default function GuidedPage() {
   }, [currentStep, totalSteps]);
 
   const handleSkip = useCallback(() => {
-    clearProgress();
     navigate("/validate", {
-      state: { solve, problem, usedHints },
+      state: { solve, problem, usedHints, problemId },
       replace: true,
     });
-  }, [navigate, solve, problem, usedHints]);
+  }, [navigate, solve, problem, usedHints, problemId]);
 
   const handleTakePhoto = useCallback(() => {
-    clearProgress();
     navigate("/validate", {
-      state: { solve, problem, usedHints },
+      state: { solve, problem, usedHints, problemId },
       replace: true,
     });
-  }, [navigate, solve, problem, usedHints]);
+  }, [navigate, solve, problem, usedHints, problemId]);
 
   if (!solve || !problem) return null;
 

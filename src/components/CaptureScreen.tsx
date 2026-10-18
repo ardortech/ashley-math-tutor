@@ -4,7 +4,10 @@ import Cropper, { type Area } from "react-easy-crop";
 import { loadImage, compressImage, bitmapToObjectUrl } from "../lib/imageUtils";
 
 interface CaptureScreenProps {
-  onBack: () => void;
+  onBack?: () => void;
+  onCapture?: (base64: string, url: string) => void;
+  buttonLabel?: string;
+  sendLabel?: string;
 }
 
 async function getCroppedBlob(
@@ -21,7 +24,12 @@ async function getCroppedBlob(
   return canvas.convertToBlob({ type: "image/jpeg", quality: 0.8 });
 }
 
-export default function CaptureScreen({ onBack }: CaptureScreenProps) {
+export default function CaptureScreen({
+  onBack,
+  onCapture,
+  buttonLabel = "選擇照片",
+  sendLabel = "送出分析",
+}: CaptureScreenProps) {
   const navigate = useNavigate();
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -84,15 +92,19 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
 
   const handleSend = useCallback(() => {
     if (!previewBase64 || !preview) return;
+    if (onCapture) {
+      onCapture(previewBase64, preview);
+      return;
+    }
     navigate("/confirm", {
       state: { imageBase64: previewBase64, imageUrl: preview },
     });
-  }, [previewBase64, preview, navigate]);
+  }, [previewBase64, preview, navigate, onCapture]);
 
   // No image selected yet — show capture button
   if (!imageSrc && !preview) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center px-6 bg-bg">
+      <div className={`flex ${onCapture ? "flex-1" : "min-h-dvh"} flex-col items-center justify-center px-6 bg-bg`}>
         <button
           onClick={() => inputRef.current?.click()}
           className="rounded-2xl bg-primary px-8 py-5 text-lg font-bold text-white
@@ -100,11 +112,13 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
             active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
             transition-all"
         >
-          選擇照片
+          {buttonLabel}
         </button>
-        <button onClick={onBack} className="mt-4 text-muted text-sm">
-          返回首頁
-        </button>
+        {onBack && (
+          <button onClick={onBack} className="mt-4 text-muted text-sm">
+            返回
+          </button>
+        )}
         <input
           ref={inputRef}
           type="file"
@@ -171,10 +185,10 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
 
   // Preview
   return (
-    <div className="flex flex-col min-h-dvh bg-bg px-4 pt-4">
+    <div className={`flex flex-col ${onCapture ? "flex-1" : "min-h-dvh"} bg-bg px-4 pt-4`}>
       <h2 className="text-lg font-bold text-ink mb-3">照片預覽</h2>
       <div className="rounded-2xl border border-card-border bg-card overflow-hidden">
-        <img src={preview!} alt="裁切後的題目照片" className="w-full" />
+        <img src={preview!} alt="裁切後的照片" className="w-full" />
       </div>
       <div className="flex gap-3 mt-4">
         <button
@@ -191,12 +205,14 @@ export default function CaptureScreen({ onBack }: CaptureScreenProps) {
             active:translate-y-1 active:shadow-[0_3px_0_0_var(--color-primary-pressed)]
             transition-all"
         >
-          送出分析
+          {sendLabel}
         </button>
       </div>
-      <button onClick={onBack} className="mt-4 text-muted text-sm text-center">
-        返回首頁
-      </button>
+      {onBack && (
+        <button onClick={onBack} className="mt-4 text-muted text-sm text-center">
+          返回
+        </button>
+      )}
       <input
         ref={inputRef}
         type="file"
