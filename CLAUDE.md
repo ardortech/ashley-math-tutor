@@ -22,7 +22,7 @@ A student photographs a math problem → the AI tutor guides her **one step at a
 - **Backend:** Serverless functions (Netlify Functions or Vercel) as a proxy to the Claude API. **The API key lives only on the server.** Never put it in frontend code.
 - **AI:** Claude API with image input (vision). Use `claude-sonnet-5-5` for tutoring/validation; model name in one config constant so it's easy to change.
 - **Storage:** `localStorage`/IndexedDB on the iPad for pet state, history, and settings. No user accounts in v1.
-- **Deploy:** a subdomain like `math.klchang.com.tw`.
+- **Deploy:** a subdomain like `ashley.klchang.com.tw`.
 
 ---
 
@@ -45,27 +45,36 @@ A student photographs a math problem → the AI tutor guides her **one step at a
 - This step matters — misread handwriting/print is the #1 cause of wrong tutoring.
 
 ### 3.3 引導解題 (Guided steps — the heart of the app)
-On the first analyze call, the server asks Claude to return **structured JSON** (not shown to her):
-```json
-{
-  "problem_latex": "...",
-  "topic": "一元一次方程式",
-  "final_answer": "x = 3",
-  "solution_steps": ["...", "...", "..."],
-  "hint_ladder": [...]
-}
-```
+
+**Two-endpoint flow:**
+1. `/api/analyze` — takes the photo, returns `{ problems: [{ problem_latex, problem_text, topic }] }` (always an array, even for a single problem). Fast: only transcribes, doesn't solve.
+2. `/api/solve` — takes the **confirmed problem text** (no photo), returns `{ overview_hint, topic, final_answer, solution_steps, hint_ladder }`. Called only after she confirms or edits the problem.
+
 Keep `final_answer` and `solution_steps` in app state but **never render them** until she has solved it.
 
-The UI shows **one step at a time**, with three buttons after each:
+**Overview hint (大方向提示):**
+After `/api/solve` returns, before showing step 1, 跳跳 says the `overview_hint`: 1–2 sentences naming the problem type and goal, with **no numbers, no computation, no answer**. Example: 「這是一元一次方程式喔！我們的目標是讓 $x$ 自己站在等號一邊。想想看，要先處理什麼呢？」
+Two buttons below:
+- 「帶我一步一步來」→ enter step-by-step guidance
+- 「我知道怎麼做了！」→ skip to 拍解答 (see **Skip** below)
+
+**Step-by-step guidance:**
+The UI shows **one step at a time**, with buttons after each:
 - 「我懂了，我來試試」 → go work on paper
 - 「再給我一點提示」 → next hint level
 - 「我還是卡住了」 → show this step worked out, then stop again at the next step
+- 「我知道怎麼做了！」→ skip remaining steps, go to 拍解答
 
 **Hint ladder per step (escalate only when she asks):**
 1. **提問** — a guiding question. e.g. 「題目要我們求什麼？」「你覺得要先處理括號還是先移項？」
 2. **方向** — name the strategy. e.g. 「試試看把有 x 的都放到等號左邊。」
 3. **示範一小步** — do just this one step, then hand it back: 「接下來換你！」
+
+**Skip (跳過步驟):**
+- 「我知道怎麼做了！」is available on the overview screen and every step screen.
+- Pressing it skips directly to 「拍下我的算式」→ same validation flow.
+- Track `usedHints: boolean` per problem. First attempt correct **and** `usedHints === false` → 點心 +2; otherwise +1.
+- `solveLog` entries include the `usedHints` field.
 
 Rules:
 - Never reveal the final answer during guidance.

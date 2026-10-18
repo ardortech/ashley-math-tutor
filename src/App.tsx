@@ -4,6 +4,7 @@ import { getPin } from "./lib/storage";
 import PinScreen from "./components/PinScreen";
 import HomePage from "./pages/HomePage";
 import CapturePage from "./pages/CapturePage";
+import ConfirmPage from "./pages/ConfirmPage";
 
 export default function App() {
   const [authed, setAuthed] = useState(() => !!getPin());
@@ -15,14 +16,14 @@ export default function App() {
     }
   }, [authed, navigate]);
 
+  const pinScreen = <PinScreen onSuccess={() => { setAuthed(true); navigate("/", { replace: true }); }} />;
+
   return (
     <Routes>
-      <Route
-        path="/pin"
-        element={<PinScreen onSuccess={() => { setAuthed(true); navigate("/", { replace: true }); }} />}
-      />
-      <Route path="/" element={authed ? <HomePage /> : <PinScreen onSuccess={() => { setAuthed(true); navigate("/", { replace: true }); }} />} />
-      <Route path="/capture" element={authed ? <CapturePage /> : <PinScreen onSuccess={() => { setAuthed(true); navigate("/", { replace: true }); }} />} />
+      <Route path="/pin" element={pinScreen} />
+      <Route path="/" element={authed ? <HomePage /> : pinScreen} />
+      <Route path="/capture" element={authed ? <CapturePage /> : pinScreen} />
+      <Route path="/confirm" element={authed ? <ConfirmPage /> : pinScreen} />
     </Routes>
   );
 }
