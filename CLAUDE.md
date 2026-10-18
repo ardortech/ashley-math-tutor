@@ -94,16 +94,25 @@ Rules:
 
 ### 3.4 拍解答 → 批改 (Photograph work → validate)
 - Button: 「📷 拍下我的算式」
-- Server sends: original problem + stored solution + her work photo. Claude checks:
+- `/api/validate` input: `{ image, problem_text, final_answer, solution_steps, attempt }`. Also accepts an optional `student_answer` (string) for text-based validation without a photo — when present, `image` is not required and Claude compares the typed answer against the correct answer instead of reading a photo.
+- Server sends: original problem + stored solution + her work photo (or typed answer). Claude checks:
   - Is the final answer correct (equivalent forms accepted: `6/4 = 3/2 = 1.5`, `x=3` vs `3`)?
   - Is the process sound? Find the **first** line where something went wrong.
 - Response JSON:
 ```json
 { "result": "correct" | "partially_correct" | "incorrect" | "unreadable",
-  "first_error_line": "...",
-  "feedback": "..." }
+  "lines": ["她寫的第 1 行", "第 2 行", ...],
+  "first_error_line_index": 0,
+  "related_step_index": 2,
+  "feedback": "給她的話" }
 ```
+  - `lines`: each line of the student's work, transcribed from the photo (empty array for text-only validation or unreadable).
+  - `first_error_line_index`: 0-indexed position in `lines` of the first incorrect line (`null` if none).
+  - `related_step_index`: which `solution_steps` entry (0-indexed) the error maps to (`null` if no clear mapping). Used to resume `/guided` at the right step when she taps 「給我一點提示」.
+- **Attempt tracking:** `attempt` starts at 1 per problem and is stored in `localStorage` progress, so it survives page reloads. `unreadable` does **not** increment the attempt counter. On attempt < 3, answer leak prevention kicks in: if the feedback contains the final answer, the server retries once and falls back to a safe generic message.
+- **Duplicate scoring prevention:** each problem gets a `problemId` (generated via `crypto.randomUUID()` when the solve starts). On correct/partially_correct, the frontend checks `isScoredProblem(problemId)` before awarding points — prevents double-counting on page refresh.
 - **Correct:** celebrate, praise the effort/method (「你把移項做得很仔細！」), not "you're so smart".
+- **Partially correct:** show 「答對了！」 with success color, but highlight the problematic line in `fix` color with a gentle reminder.
 - **Incorrect:** point to *where*, not the fix: 「第三行的正負號再檢查一次看看？」 Then she can retry or ask for a hint. Don't give the correct answer until 2 failed attempts; on the 3rd, walk through the corrected step kindly.
 - **Unreadable:** 「字有點看不清楚，可以再拍一次嗎？光線亮一點會更好喔！」
 

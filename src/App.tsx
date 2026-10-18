@@ -7,6 +7,7 @@ import CapturePage from "./pages/CapturePage";
 import ConfirmPage from "./pages/ConfirmPage";
 import GuidedPage from "./pages/GuidedPage";
 import ValidatePage from "./pages/ValidatePage";
+import PracticePage from "./pages/PracticePage";
 
 export default function App() {
   const [authed, setAuthed] = useState(() => !!getPin());
@@ -28,6 +29,7 @@ export default function App() {
       <Route path="/confirm" element={authed ? <ConfirmPage /> : pinScreen} />
       <Route path="/guided" element={authed ? <GuidedPage /> : pinScreen} />
       <Route path="/validate" element={authed ? <ValidatePage /> : pinScreen} />
+      <Route path="/practice" element={authed ? <PracticePage /> : pinScreen} />
     </Routes>
   );
 }

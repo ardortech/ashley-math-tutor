@@ -23,6 +23,8 @@ interface LocationState {
   problem: AnalyzeProblem;
   usedHints: boolean;
   problemId: string;
+  practiceMode?: boolean;
+  practiceIndex?: number;
 }
 
 type Phase =
@@ -41,6 +43,9 @@ export default function ValidatePage() {
   const problem = locState?.problem ?? progress?.problem;
   const problemId = locState?.problemId ?? progress?.problemId ?? "";
 
+  const practiceMode = locState?.practiceMode ?? false;
+  const practiceIndex = locState?.practiceIndex ?? 0;
+
   const [usedHints, setUsedHints] = useState(
     () => locState?.usedHints ?? progress?.usedHints ?? true,
   );
@@ -56,6 +61,7 @@ export default function ValidatePage() {
   const persistAttempt = useCallback(
     (nextAttempt: number, nextUsedHints?: boolean) => {
       if (!solve || !problem || !problemId) return;
+      if (practiceMode) return;
       saveProgress({
         problem,
         solve,
@@ -67,7 +73,7 @@ export default function ValidatePage() {
         messages: [],
       });
     },
-    [solve, problem, problemId, usedHints],
+    [solve, problem, problemId, usedHints, practiceMode],
   );
 
   const handleCapture = useCallback(
@@ -89,6 +95,11 @@ export default function ValidatePage() {
           result.result === "correct" ||
           result.result === "partially_correct"
         ) {
+          if (practiceMode) {
+            navigate("/practice", { replace: true });
+            return;
+          }
+
           let snacksEarned = 0;
           if (!isScoredProblem(problemId)) {
             markProblemScored(problemId);
@@ -147,16 +158,18 @@ export default function ValidatePage() {
       if (!solve || !problem || !problemId) return;
       setUsedHints(true);
       const stepToResume = relatedStepIndex ?? 0;
-      saveProgress({
-        problem,
-        solve,
-        usedHints: true,
-        problemId,
-        attempt,
-        currentStep: stepToResume,
-        hintLevel: 0,
-        messages: [],
-      });
+      if (!practiceMode) {
+        saveProgress({
+          problem,
+          solve,
+          usedHints: true,
+          problemId,
+          attempt,
+          currentStep: stepToResume,
+          hintLevel: 0,
+          messages: [],
+        });
+      }
       navigate("/guided", {
         state: {
           solve,
@@ -166,10 +179,12 @@ export default function ValidatePage() {
           resumeHintLevel: 0,
           resumeMessages: [],
           resumeUsedHints: true,
+          practiceMode,
+          practiceIndex,
         },
       });
     },
-    [solve, problem, problemId, attempt, navigate],
+    [solve, problem, problemId, attempt, navigate, practiceMode, practiceIndex],
   );
 
   if (!solve || !problem) return null;
@@ -255,14 +270,20 @@ export default function ValidatePage() {
 
           <div className="mt-6 w-full space-y-3">
             <button
-              disabled
-              className="w-full rounded-[24px] bg-primary/40 px-6 py-5 text-lg font-bold text-white/70
-                cursor-not-allowed relative overflow-visible"
+              onClick={() =>
+                navigate("/practice", {
+                  state: {
+                    problem_text: problem.problem_text,
+                    topic: problem.topic ?? solve.topic,
+                  },
+                })
+              }
+              className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
+                shadow-[0_8px_0_0_var(--color-primary-pressed)]
+                active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
+                transition-all"
             >
               再來挑戰 2 題練習題
-              <span className="absolute -top-2 -right-2 rounded-full bg-pet text-white text-xs px-2 py-0.5 font-bold">
-                即將推出
-              </span>
             </button>
             <button
               onClick={() => navigate("/")}
