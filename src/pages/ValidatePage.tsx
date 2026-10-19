@@ -3,20 +3,16 @@ import { useNavigate, useLocation } from "react-router-dom";
 import StepPills from "../components/StepPills";
 import CaptureScreen from "../components/CaptureScreen";
 import MathText from "../components/MathText";
+import CelebrationScreen from "../components/CelebrationScreen";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
-import TiaoTiaoCheer from "../components/pet/TiaoTiaoCheer";
 import { validateWork, ApiError } from "../lib/api";
 import type { AnalyzeProblem, SolveResult, ValidateResult } from "../lib/api";
 import {
   getProgress,
   saveProgress,
   clearProgress,
-  addSolveEntry,
-  getPetState,
-  savePetState,
-  isScoredProblem,
-  markProblemScored,
 } from "../lib/storage";
+import { scoreCorrectAnswer, type ScoreResult } from "../lib/scoring";
 
 interface LocationState {
   solve: SolveResult;
@@ -31,7 +27,7 @@ type Phase =
   | { step: "capture" }
   | { step: "validating" }
   | { step: "result"; imageUrl: string; data: ValidateResult }
-  | { step: "success"; data: ValidateResult; snacksEarned: number };
+  | { step: "success"; data: ValidateResult; score: ScoreResult };
 
 export default function ValidatePage() {
   const navigate = useNavigate();
@@ -100,24 +96,17 @@ export default function ValidatePage() {
             return;
           }
 
-          let snacksEarned = 0;
-          if (!isScoredProblem(problemId)) {
-            markProblemScored(problemId);
-            addSolveEntry(problem.topic ?? solve.topic, usedHints);
-
-            const firstTryNoHints = currentAttempt === 1 && !usedHints;
-            snacksEarned = firstTryNoHints ? 2 : 1;
-
-            const pet = getPetState();
-            savePetState({
-              ...pet,
-              solvedCount: pet.solvedCount + 1,
-              snacks: pet.snacks + snacksEarned,
-            });
-          }
+          const firstTryNoHints = currentAttempt === 1 && !usedHints;
+          const snackAmount = firstTryNoHints ? 2 : 1;
+          const score = scoreCorrectAnswer(
+            problemId,
+            problem.topic ?? solve.topic,
+            usedHints,
+            snackAmount,
+          );
 
           clearProgress();
-          setPhase({ step: "success", data: result, snacksEarned });
+          setPhase({ step: "success", data: result, score });
         } else if (result.result === "unreadable") {
           setPhase({ step: "result", imageUrl, data: result });
         } else {
@@ -142,7 +131,7 @@ export default function ValidatePage() {
         });
       }
     },
-    [solve, problem, attempt, usedHints, problemId, persistAttempt],
+    [solve, problem, attempt, usedHints, problemId, persistAttempt, practiceMode, navigate],
   );
 
   const handleRetry = useCallback(() => {
@@ -224,51 +213,24 @@ export default function ValidatePage() {
   // === SUCCESS ===
   if (phase.step === "success") {
     const isPartial = phase.data.result === "partially_correct";
+    const { score } = phase;
     return (
-      <div className="min-h-dvh bg-bg pb-8">
-        <StepPills current={3} />
-        <div className="flex flex-col items-center px-6 pt-8">
-          <div style={{ width: 160, height: 160 }}>
-            <TiaoTiaoCheer className="w-full h-full" />
-          </div>
-
-          <div className="mt-4 rounded-full bg-success-soft px-5 py-2">
-            <span className="text-success text-lg font-bold">答對了！</span>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-card-border bg-card px-4 py-3 w-full">
-            <MathText
-              text={phase.data.feedback}
-              className="text-base text-ink leading-relaxed"
-            />
-          </div>
-
-          {isPartial &&
-            phase.data.first_error_line_index !== null &&
-            phase.data.lines.length > 0 && (
-              <div className="mt-3 rounded-2xl border border-fix/30 bg-fix-soft px-4 py-3 w-full">
-                <p className="text-sm text-fix font-medium mb-1">
-                  有一行可以再注意：
-                </p>
-                <MathText
-                  text={
-                    phase.data.lines[phase.data.first_error_line_index] ?? ""
-                  }
-                  className="text-sm text-ink"
-                />
-              </div>
-            )}
-
-          {phase.snacksEarned > 0 && (
-            <div className="mt-4 rounded-2xl bg-pet-soft px-5 py-3 flex items-center gap-2">
-              <span className="text-2xl">🦴</span>
-              <span className="text-pet font-bold text-lg">
-                點心 +{phase.snacksEarned}
-              </span>
-            </div>
-          )}
-
-          <div className="mt-6 w-full space-y-3">
+      <CelebrationScreen
+        feedback={phase.data.feedback}
+        snacksEarned={score.snacksEarned}
+        solvedCount={score.newSolvedCount}
+        equippedAccessories={score.equippedAccessories}
+        isPartiallyCorrect={isPartial}
+        partialErrorLine={
+          isPartial && phase.data.first_error_line_index !== null && phase.data.lines.length > 0
+            ? phase.data.lines[phase.data.first_error_line_index] ?? null
+            : null
+        }
+        prevLevel={score.prevLevel}
+        newLevel={score.newLevel}
+        newAccessories={score.newAccessories}
+        buttons={
+          <>
             <button
               onClick={() =>
                 navigate("/practice", {
@@ -290,11 +252,11 @@ export default function ValidatePage() {
               className="w-full rounded-[24px] border-2 border-card-border bg-card px-6 py-5 text-lg font-bold text-ink
                 active:bg-card-border/30 transition-colors"
             >
-              回首頁
+              今天先到這裡
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   }
 
@@ -306,7 +268,6 @@ export default function ValidatePage() {
     <div className="min-h-dvh bg-bg pb-8">
       <StepPills current={3} />
       <div className="px-4 pt-2">
-        {/* Student's work photo */}
         <div className="rounded-2xl border border-card-border bg-card overflow-hidden mb-4">
           <img
             src={imageUrl}
@@ -328,7 +289,6 @@ export default function ValidatePage() {
                 />
               </div>
             </div>
-
             <button
               onClick={handleRetakeUnreadable}
               className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
@@ -341,7 +301,6 @@ export default function ValidatePage() {
           </>
         ) : (
           <>
-            {/* Lines with error highlighting */}
             {data.lines.length > 0 && (
               <div className="rounded-2xl border border-card-border bg-card px-4 py-3 mb-4 space-y-2">
                 {data.lines.map((line, i) => {
@@ -374,8 +333,6 @@ export default function ValidatePage() {
                 })}
               </div>
             )}
-
-            {/* Feedback */}
             <div className="flex items-start gap-3 mb-6">
               <div className="shrink-0" style={{ width: 48, height: 48 }}>
                 <TiaoTiaoHeadCurious className="w-full h-full" />
@@ -392,8 +349,6 @@ export default function ValidatePage() {
                 </div>
               </div>
             </div>
-
-            {/* Action buttons */}
             <div className="space-y-3">
               <button
                 onClick={() => handleGetHint(data.related_step_index)}

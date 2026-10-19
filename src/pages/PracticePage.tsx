@@ -3,9 +3,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import StepPills from "../components/StepPills";
 import CaptureScreen from "../components/CaptureScreen";
 import MathText from "../components/MathText";
+import CelebrationScreen from "../components/CelebrationScreen";
 import TiaoTiaoHeadHappy from "../components/pet/TiaoTiaoHeadHappy";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
-import TiaoTiaoCheer from "../components/pet/TiaoTiaoCheer";
 import {
   generatePractice,
   solveProblem,
@@ -18,13 +18,9 @@ import {
   getPracticeProgress,
   savePracticeProgress,
   clearPracticeProgress,
-  addSolveEntry,
-  getPetState,
-  savePetState,
-  isScoredProblem,
-  markProblemScored,
 } from "../lib/storage";
 import type { VerifiedPracticeProblem } from "../lib/storage";
+import { scoreCorrectAnswer, type ScoreResult } from "../lib/scoring";
 
 interface LocationState {
   problem_text: string;
@@ -37,7 +33,7 @@ type Phase =
   | { step: "answering" }
   | { step: "capture" }
   | { step: "checking" }
-  | { step: "correct"; feedback: string }
+  | { step: "correct"; feedback: string; score: ScoreResult }
   | { step: "incorrect"; feedback: string }
   | { step: "done" };
 
@@ -86,7 +82,6 @@ export default function PracticePage() {
     [originText, topic],
   );
 
-  // Generate practice problems on mount
   useEffect(() => {
     if (phase.step !== "loading") return;
     if (problems.length > 0) return;
@@ -108,7 +103,6 @@ export default function PracticePage() {
 
         if (cancelled) return;
 
-        // Verify each problem by solving independently in parallel
         const verified = await verifyProblems(practiceResult.problems, topic);
 
         if (cancelled) return;
@@ -157,7 +151,6 @@ export default function PracticePage() {
   ): Promise<VerifiedPracticeProblem[]> {
     const results: VerifiedPracticeProblem[] = [];
 
-    // Solve all in parallel
     const solvePromises = raw.map((p) =>
       solveProblem(p.problem_text).catch(() => null),
     );
@@ -178,7 +171,6 @@ export default function PracticePage() {
         continue;
       }
 
-      // Mismatch or unknown — retry once: regenerate just this problem
       try {
         const retry = await generatePractice({
           problem_text: originText,
@@ -200,7 +192,6 @@ export default function PracticePage() {
           continue;
         }
 
-        // Second retry
         const retry2 = await generatePractice({
           problem_text: originText,
           topic: topicName,
@@ -219,27 +210,17 @@ export default function PracticePage() {
             problemId: crypto.randomUUID(),
           });
         }
-        // else: skip this problem
       } catch {
-        // skip this problem on error
+        // skip
       }
     }
 
     return results;
   }
 
-  const scoreCorrect = useCallback(
-    (prob: VerifiedPracticeProblem) => {
-      if (!isScoredProblem(prob.problemId)) {
-        markProblemScored(prob.problemId);
-        addSolveEntry(topic, true);
-        const pet = getPetState();
-        savePetState({
-          ...pet,
-          solvedCount: pet.solvedCount + 1,
-          snacks: pet.snacks + 1,
-        });
-      }
+  const doScoreCorrect = useCallback(
+    (prob: VerifiedPracticeProblem): ScoreResult => {
+      return scoreCorrectAnswer(prob.problemId, topic, true, 1);
     },
     [topic],
   );
@@ -250,7 +231,7 @@ export default function PracticePage() {
 
     const cmp = compareAnswers(text, currentProblem.final_answer);
     if (cmp === "equal") {
-      scoreCorrect(currentProblem);
+      const score = doScoreCorrect(currentProblem);
       const newCompleted = [...completed];
       newCompleted[currentIndex] = true;
       setCompleted(newCompleted);
@@ -259,6 +240,7 @@ export default function PracticePage() {
       setPhase({
         step: "correct",
         feedback: "做得好！你的答案完全正確！",
+        score,
       });
       return;
     }
@@ -275,7 +257,6 @@ export default function PracticePage() {
       return;
     }
 
-    // unknown — send to /api/validate for text comparison
     setPhase({ step: "checking" });
     try {
       const result = await validateWork({
@@ -287,13 +268,13 @@ export default function PracticePage() {
       });
 
       if (result.result === "correct" || result.result === "partially_correct") {
-        scoreCorrect(currentProblem);
+        const score = doScoreCorrect(currentProblem);
         const newCompleted = [...completed];
         newCompleted[currentIndex] = true;
         setCompleted(newCompleted);
         persist(problems, currentIndex, attempts, newCompleted);
         setAnswerText("");
-        setPhase({ step: "correct", feedback: result.feedback });
+        setPhase({ step: "correct", feedback: result.feedback, score });
       } else {
         const newAttempts = [...attempts];
         newAttempts[currentIndex] = (newAttempts[currentIndex] ?? 1) + 1;
@@ -307,7 +288,7 @@ export default function PracticePage() {
         err instanceof ApiError ? err.message : "批改失敗，請再試一次";
       setPhase({ step: "incorrect", feedback: `⚠️ ${msg}` });
     }
-  }, [answerText, currentProblem, attempts, completed, currentIndex, problems, persist, scoreCorrect]);
+  }, [answerText, currentProblem, attempts, completed, currentIndex, problems, persist, doScoreCorrect]);
 
   const handlePhotoCapture = useCallback(
     async (imageBase64: string) => {
@@ -324,12 +305,12 @@ export default function PracticePage() {
         });
 
         if (result.result === "correct" || result.result === "partially_correct") {
-          scoreCorrect(currentProblem);
+          const score = doScoreCorrect(currentProblem);
           const newCompleted = [...completed];
           newCompleted[currentIndex] = true;
           setCompleted(newCompleted);
           persist(problems, currentIndex, attempts, newCompleted);
-          setPhase({ step: "correct", feedback: result.feedback });
+          setPhase({ step: "correct", feedback: result.feedback, score });
         } else if (result.result === "unreadable") {
           setPhase({ step: "incorrect", feedback: result.feedback });
         } else {
@@ -345,7 +326,7 @@ export default function PracticePage() {
         setPhase({ step: "incorrect", feedback: `⚠️ ${msg}` });
       }
     },
-    [currentProblem, attempts, completed, currentIndex, problems, persist, scoreCorrect],
+    [currentProblem, attempts, completed, currentIndex, problems, persist, doScoreCorrect],
   );
 
   const handleNextProblem = useCallback(() => {
@@ -452,7 +433,7 @@ export default function PracticePage() {
     );
   }
 
-  // === CAPTURE (photo mode) ===
+  // === CAPTURE ===
   if (phase.step === "capture") {
     return (
       <div className="min-h-dvh bg-bg flex flex-col">
@@ -486,55 +467,41 @@ export default function PracticePage() {
 
   // === CORRECT ===
   if (phase.step === "correct") {
+    const { score } = phase;
+    const isLast = currentIndex + 1 >= totalProblems;
     return (
-      <div className="min-h-dvh bg-bg pb-8">
-        <StepPills current={4} />
-        <div className="flex flex-col items-center px-6 pt-8">
-          <div style={{ width: 120, height: 120 }}>
-            <TiaoTiaoCheer className="w-full h-full" />
-          </div>
-
-          <div className="mt-4 rounded-full bg-success-soft px-5 py-2">
-            <span className="text-success text-lg font-bold">答對了！</span>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-card-border bg-card px-4 py-3 w-full">
-            <MathText
-              text={phase.feedback}
-              className="text-base text-ink leading-relaxed"
-            />
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-pet-soft px-5 py-3 flex items-center gap-2">
-            <span className="text-2xl">🦴</span>
-            <span className="text-pet font-bold text-lg">點心 +1</span>
-          </div>
-
-          <div className="mt-6 w-full">
-            {currentIndex + 1 < totalProblems ? (
-              <button
-                onClick={handleNextProblem}
-                className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
-                  shadow-[0_8px_0_0_var(--color-primary-pressed)]
-                  active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
-                  transition-all"
-              >
-                下一題 →
-              </button>
-            ) : (
-              <button
-                onClick={handleNextProblem}
-                className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
-                  shadow-[0_8px_0_0_var(--color-primary-pressed)]
-                  active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
-                  transition-all"
-              >
-                完成！
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <CelebrationScreen
+        feedback={phase.feedback}
+        snacksEarned={score.snacksEarned}
+        solvedCount={score.newSolvedCount}
+        equippedAccessories={score.equippedAccessories}
+        prevLevel={score.prevLevel}
+        newLevel={score.newLevel}
+        newAccessories={score.newAccessories}
+        buttons={
+          isLast ? (
+            <button
+              onClick={handleNextProblem}
+              className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
+                shadow-[0_8px_0_0_var(--color-primary-pressed)]
+                active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
+                transition-all"
+            >
+              完成！
+            </button>
+          ) : (
+            <button
+              onClick={handleNextProblem}
+              className="w-full rounded-[24px] bg-primary px-6 py-5 text-lg font-bold text-white
+                shadow-[0_8px_0_0_var(--color-primary-pressed)]
+                active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
+                transition-all"
+            >
+              下一題 →
+            </button>
+          )
+        }
+      />
     );
   }
 
@@ -594,31 +561,21 @@ export default function PracticePage() {
   // === DONE ===
   if (phase.step === "done") {
     return (
-      <div className="min-h-dvh bg-bg pb-8">
-        <StepPills current={4} />
-        <div className="flex flex-col items-center px-6 pt-8">
-          <div style={{ width: 160, height: 160 }}>
-            <TiaoTiaoCheer className="w-full h-full" />
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-card-border bg-card px-4 py-4 w-full text-center">
-            <p className="text-lg font-bold text-ink">
-              {totalProblems >= 2
-                ? "兩題都完成了，太厲害了！"
-                : "一題完成了，太厲害了！"}
-            </p>
-            <p className="text-sm text-muted mt-1">跳跳為你驕傲！</p>
-          </div>
-
+      <CelebrationScreen
+        feedback={totalProblems >= 2 ? "兩題都完成了，太厲害了！跳跳為你驕傲！" : "一題完成了，太厲害了！"}
+        snacksEarned={0}
+        solvedCount={0}
+        equippedAccessories={[]}
+        buttons={
           <button
             onClick={() => navigate("/")}
-            className="mt-6 w-full rounded-[24px] border-2 border-card-border bg-card px-6 py-5 text-lg font-bold text-ink
+            className="w-full rounded-[24px] border-2 border-card-border bg-card px-6 py-5 text-lg font-bold text-ink
               active:bg-card-border/30 transition-colors"
           >
             回首頁
           </button>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
@@ -629,7 +586,6 @@ export default function PracticePage() {
     <div className="min-h-dvh bg-bg pb-8">
       <StepPills current={4} />
       <div className="px-4 pt-2">
-        {/* Progress dots */}
         <div className="flex items-center justify-center gap-2 mb-4">
           {problems.map((_, i) => (
             <div
@@ -648,7 +604,6 @@ export default function PracticePage() {
           </span>
         </div>
 
-        {/* Problem card */}
         <div className="rounded-2xl border border-card-border bg-card px-4 py-4 mb-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="inline-block rounded-full bg-primary-soft text-primary text-xs font-bold px-2 py-0.5">
@@ -662,21 +617,17 @@ export default function PracticePage() {
           />
         </div>
 
-        {/* 跳跳 encouragement */}
         <div className="flex items-start gap-3 mb-4">
           <div className="shrink-0" style={{ width: 48, height: 48 }}>
             <TiaoTiaoHeadHappy className="w-full h-full" />
           </div>
           <div className="rounded-2xl border border-card-border bg-card px-4 py-3 flex-1">
             <p className="text-base text-ink">
-              {currentIndex === 0
-                ? "來試試看這題吧！"
-                : "再來一題！"}
+              {currentIndex === 0 ? "來試試看這題吧！" : "再來一題！"}
             </p>
           </div>
         </div>
 
-        {/* Answer input */}
         <div className="rounded-2xl border border-card-border bg-card px-4 py-4 mb-3">
           <p className="text-xs text-muted mb-2">輸入答案：</p>
           <div className="flex items-center gap-2">

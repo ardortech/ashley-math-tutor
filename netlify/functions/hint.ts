@@ -16,6 +16,7 @@ const HintRequest = z.object({
     .array(z.object({ role: z.enum(["tutor", "student"]), text: z.string() }))
     .max(6)
     .optional(),
+  textbook: z.enum(["康軒", "南一", "翰林"]).optional(),
 });
 
 const HintResponse = z.object({
@@ -36,7 +37,7 @@ ${input.solution_steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}
 
 目前在第 ${stepNum} 步：${input.solution_steps[input.step_index]}
 
-題目風格、用詞和難度請參考${TEXTBOOK}版國一數學課本。
+題目風格、用詞和難度請參考${input.textbook ?? TEXTBOOK}版國一數學課本。
 
 提示等級：${input.hint_level}（${levelLabel}）
 `;

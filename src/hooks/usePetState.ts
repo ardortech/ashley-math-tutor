@@ -1,25 +1,26 @@
 import { useState, useCallback } from "react";
 import { getPetState, savePetState, type PetState } from "../lib/storage";
+import {
+  levelFromSolves,
+  nextThreshold,
+  unlockedAccessoryIds,
+  resolveEquipped,
+} from "../lib/accessories";
 
-const LEVEL_THRESHOLDS = [1, 5, 15, 30, 50];
-
-function computeLevel(solvedCount: number): number {
-  let level = 1;
-  for (const t of LEVEL_THRESHOLDS) {
-    if (solvedCount >= t) level = LEVEL_THRESHOLDS.indexOf(t) + 2;
-  }
-  return Math.min(level, LEVEL_THRESHOLDS.length + 1);
-}
-
-function nextThreshold(solvedCount: number): number | null {
-  for (const t of LEVEL_THRESHOLDS) {
-    if (solvedCount < t) return t;
-  }
-  return null;
+function migrateOnLoad(pet: PetState): PetState {
+  const shouldUnlock = unlockedAccessoryIds(pet.solvedCount);
+  const needsMigration = shouldUnlock.some((id) => !pet.accessories.includes(id));
+  if (!needsMigration) return pet;
+  const migrated = {
+    ...pet,
+    accessories: [...new Set([...pet.accessories, ...shouldUnlock])],
+  };
+  savePetState(migrated);
+  return migrated;
 }
 
 export function usePetState() {
-  const [pet, setPetInner] = useState<PetState>(getPetState);
+  const [pet, setPetInner] = useState<PetState>(() => migrateOnLoad(getPetState()));
 
   const setPet = useCallback((updater: (prev: PetState) => PetState) => {
     setPetInner((prev) => {
@@ -35,9 +36,35 @@ export function usePetState() {
     );
   }, [setPet]);
 
-  const level = computeLevel(pet.solvedCount);
+  const toggleAccessory = useCallback(
+    (id: string) => {
+      setPet((p) => {
+        if (!p.accessories.includes(id)) return p;
+        const isEquipped = p.equippedAccessories.includes(id);
+        if (isEquipped) {
+          return {
+            ...p,
+            equippedAccessories: p.equippedAccessories.filter((a) => a !== id),
+          };
+        }
+        const newEquipped = [...p.equippedAccessories, id];
+        return { ...p, equippedAccessories: resolveEquipped(newEquipped) };
+      });
+    },
+    [setPet],
+  );
+
+  const level = levelFromSolves(pet.solvedCount);
   const next = nextThreshold(pet.solvedCount);
   const remaining = next !== null ? next - pet.solvedCount : 0;
 
-  return { pet, setPet, feedSnack, level, remaining, maxedOut: next === null };
+  return {
+    pet,
+    setPet,
+    feedSnack,
+    toggleAccessory,
+    level,
+    remaining,
+    maxedOut: next === null,
+  };
 }

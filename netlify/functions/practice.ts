@@ -10,6 +10,7 @@ const PracticeRequest = z.object({
   topic: z.string(),
   count: z.union([z.literal(1), z.literal(2)]).default(2),
   difficulty: z.enum(["same", "harder"]).default("same"),
+  textbook: z.enum(["康軒", "南一", "翰林"]).optional(),
 });
 
 const PracticeProblem = z.object({
@@ -36,7 +37,7 @@ function buildPracticePrompt(input: z.infer<typeof PracticeRequest>): string {
 原題：${input.problem_text}
 單元：${input.topic}
 
-題目風格、用詞和難度請參考${TEXTBOOK}版國一數學課本。
+題目風格、用詞和難度請參考${input.textbook ?? TEXTBOOK}版國一數學課本。
 
 要求：
 - 同一個技巧/單元，但用不同的數字和情境

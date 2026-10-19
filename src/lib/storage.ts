@@ -5,11 +5,11 @@ const DEVICE_ID_KEY = "mathtutor_device_id";
 const PROGRESS_KEY = "mathtutor_progress";
 const SCORED_KEY = "mathtutor_scored";
 const PRACTICE_KEY = "mathtutor_practice";
+const TEXTBOOK_KEY = "mathtutor_textbook";
 
 export interface PetState {
   schemaVersion: 1;
   name: string;
-  level: number;
   solvedCount: number;
   snacks: number;
   accessories: string[];
@@ -32,7 +32,6 @@ function localDateString(d: Date = new Date()): string {
 const DEFAULT_PET: PetState = {
   schemaVersion: 1,
   name: "跳跳",
-  level: 1,
   solvedCount: 0,
   snacks: 0,
   accessories: [],
@@ -216,4 +215,51 @@ export function clearPracticeProgress(): void {
   } catch {
     // storage unavailable
   }
+}
+
+// ── Textbook setting ──
+
+export type Textbook = "康軒" | "南一" | "翰林";
+
+export function getTextbook(): Textbook {
+  try {
+    const val = localStorage.getItem(TEXTBOOK_KEY);
+    if (val === "南一" || val === "翰林") return val;
+  } catch { /* ignore */ }
+  return "康軒";
+}
+
+export function saveTextbook(tb: Textbook): void {
+  try {
+    localStorage.setItem(TEXTBOOK_KEY, tb);
+  } catch { /* ignore */ }
+}
+
+// ── Backup / Restore ──
+
+export interface BackupPayload {
+  schemaVersion: 1;
+  pet: PetState;
+  solveLog: SolveEntry[];
+  scoredProblemIds: string[];
+  textbook: Textbook;
+  exportedAt: string;
+}
+
+export function createBackup(): BackupPayload {
+  return {
+    schemaVersion: 1,
+    pet: getPetState(),
+    solveLog: getSolveLog(),
+    scoredProblemIds: safeGet<string[]>(SCORED_KEY) ?? [],
+    textbook: getTextbook(),
+    exportedAt: new Date().toISOString(),
+  };
+}
+
+export function restoreBackup(data: BackupPayload): void {
+  savePetState(data.pet);
+  saveSolveLog(data.solveLog);
+  safeSet(SCORED_KEY, data.scoredProblemIds);
+  saveTextbook(data.textbook);
 }
