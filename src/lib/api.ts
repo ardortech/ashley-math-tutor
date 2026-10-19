@@ -1,4 +1,4 @@
-import { getPin, clearPin, getDeviceId } from "./storage";
+import { getPin, clearPin, getDeviceId, getTextbook } from "./storage";
 
 export class ApiError extends Error {
   constructor(
@@ -69,6 +69,7 @@ export interface HintRequest {
   final_answer: string;
   student_thought?: string;
   recent_messages?: { role: "tutor" | "student"; text: string }[];
+  textbook?: string;
 }
 
 export async function analyzeImage(imageBase64: string): Promise<AnalyzeResult> {
@@ -93,7 +94,7 @@ export async function requestHint(req: HintRequest): Promise<HintResult> {
   const res = await apiFetch("/api/hint", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, textbook: req.textbook ?? getTextbook() }),
   });
   return res.json() as Promise<HintResult>;
 }
@@ -140,11 +141,12 @@ export async function generatePractice(req: {
   topic: string;
   count?: number;
   difficulty?: "same" | "harder";
+  textbook?: string;
 }): Promise<PracticeResult> {
   const res = await apiFetch("/api/practice", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(req),
+    body: JSON.stringify({ ...req, textbook: req.textbook ?? getTextbook() }),
   });
   return res.json() as Promise<PracticeResult>;
 }

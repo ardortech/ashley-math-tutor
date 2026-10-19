@@ -1,10 +1,14 @@
+import { useNavigate } from "react-router-dom";
 import SettingsIcon from "./icons/SettingsIcon";
 
 export default function Header() {
+  const navigate = useNavigate();
+
   return (
     <header className="flex items-center justify-between px-4 py-3">
       <h1 className="text-xl font-bold text-ink">數學小老師</h1>
       <button
+        onClick={() => navigate("/settings")}
         className="rounded-full p-2 text-muted hover:bg-card-border/40 active:bg-card-border/60 transition-colors"
         aria-label="設定"
       >
