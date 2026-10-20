@@ -1,5 +1,5 @@
-import type { ChoiceQuestion, ChoiceType } from "./schema";
-import { getChoiceQuestions } from "./questionBank";
+import type { Question, QuestionType } from "./schema";
+import { getAllQuestions } from "./questionBank";
 import { getAllRecords, type AnswerRecord } from "./answerRecord";
 
 const SESSION_KEY = "mathtutor_chinese_daily";
@@ -16,11 +16,11 @@ function localDateString(d: Date = new Date()): string {
 export interface DailySession {
   date: string;
   questionIds: string[];
-  answers: (number | null)[];
+  answers: (number | string | null)[];
   correct: (boolean | null)[];
   currentIndex: number;
   completed: boolean;
-  filterType?: ChoiceType;
+  filterType?: QuestionType;
 }
 
 export function getAdminMode(): boolean {
@@ -76,18 +76,18 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export async function buildDailySession(filterType?: ChoiceType): Promise<DailySession> {
+export async function buildDailySession(filterType?: QuestionType): Promise<DailySession> {
   const includeUnverified = getAdminMode();
-  const available = getChoiceQuestions({ includeUnverified, type: filterType });
+  const available = getAllQuestions({ includeUnverified, type: filterType });
   const records = await getAllRecords();
   const recordMap = new Map<string, AnswerRecord>();
   for (const r of records) {
     recordMap.set(r.questionId, r);
   }
 
-  const wrong: ChoiceQuestion[] = [];
-  const unseen: ChoiceQuestion[] = [];
-  const seen: ChoiceQuestion[] = [];
+  const wrong: Question[] = [];
+  const unseen: Question[] = [];
+  const seen: Question[] = [];
 
   for (const q of available) {
     const rec = recordMap.get(q.id);

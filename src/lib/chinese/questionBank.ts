@@ -1,4 +1,15 @@
-import { QuestionBankFileSchema, type Question, type ChoiceQuestion, CHOICE_TYPES, type ChoiceType } from "./schema";
+import {
+  QuestionBankFileSchema,
+  type Question,
+  type ChoiceQuestion,
+  type WritingQuestion,
+  CHOICE_TYPES,
+  WRITING_TYPES,
+  ALL_QUESTION_TYPES,
+  type ChoiceType,
+  type QuestionType,
+  QUESTION_TYPE_LABELS,
+} from "./schema";
 
 const bankModules = import.meta.glob<{ default: unknown }>(
   "/content/chinese/*.json",
@@ -34,7 +45,7 @@ function getAll(): Question[] {
 
 export interface QuestionFilter {
   includeUnverified?: boolean;
-  type?: ChoiceType;
+  type?: QuestionType;
 }
 
 export function getChoiceQuestions(filter: QuestionFilter = {}): ChoiceQuestion[] {
@@ -46,16 +57,44 @@ export function getChoiceQuestions(filter: QuestionFilter = {}): ChoiceQuestion[
   });
 }
 
+export function getWritingQuestions(filter: QuestionFilter = {}): WritingQuestion[] {
+  const all = getAll();
+  return all.filter((q): q is WritingQuestion => {
+    if (!filter.includeUnverified && !q.verified) return false;
+    if (filter.type) return q.type === filter.type;
+    return (WRITING_TYPES as readonly string[]).includes(q.type);
+  });
+}
+
+export function getAllQuestions(filter: QuestionFilter = {}): Question[] {
+  const all = getAll();
+  return all.filter((q) => {
+    if (!filter.includeUnverified && !q.verified) return false;
+    if (filter.type) return q.type === filter.type;
+    return (ALL_QUESTION_TYPES as readonly string[]).includes(q.type);
+  });
+}
+
 export function getQuestionById(id: string): Question | undefined {
   return getAll().find((q) => q.id === id);
 }
 
+export function getTypeStats(includeUnverified: boolean): Record<QuestionType, { total: number; label: string }> {
+  const questions = getAllQuestions({ includeUnverified });
+  const result = {} as Record<QuestionType, { total: number; label: string }>;
+  for (const t of ALL_QUESTION_TYPES) {
+    result[t] = {
+      total: questions.filter((q) => q.type === t).length,
+      label: QUESTION_TYPE_LABELS[t],
+    };
+  }
+  return result;
+}
+
 export function getChoiceTypeStats(includeUnverified: boolean): Record<ChoiceType, { total: number; label: string }> {
-  const questions = getChoiceQuestions({ includeUnverified });
-  const rc = questions.filter((q) => q.type === "reading_choice").length;
-  const mc = questions.filter((q) => q.type === "meaning_choice").length;
+  const full = getTypeStats(includeUnverified);
   return {
-    reading_choice: { total: rc, label: "字音" },
-    meaning_choice: { total: mc, label: "字義" },
+    reading_choice: full.reading_choice,
+    meaning_choice: full.meaning_choice,
   };
 }

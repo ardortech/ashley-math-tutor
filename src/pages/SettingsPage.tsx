@@ -362,6 +362,24 @@ export default function SettingsPage() {
           )}
         </section>
 
+        {/* Scribble reminder */}
+        <section className="rounded-2xl border border-card-border bg-card p-4">
+          <h2 className="text-base font-bold text-ink mb-2">✏️ 隨手寫小提醒</h2>
+          <p className="text-sm text-ink leading-relaxed mb-2">
+            國文的「改錯字」和「注音寫國字」可以用 Apple Pencil 直接在格子裡寫字。
+            要先確認 iPad 的隨手寫功能有打開：
+          </p>
+          <ol className="text-sm text-ink leading-relaxed list-decimal pl-5 space-y-1">
+            <li>打開 iPad 的「<strong>設定</strong>」</li>
+            <li>點「<strong>Apple Pencil</strong>」</li>
+            <li>打開「<strong>隨手寫</strong>」</li>
+            <li>確認語言裡有「<strong>繁體中文</strong>」</li>
+          </ol>
+          <p className="text-xs text-muted mt-3">
+            沒有 Apple Pencil 也沒關係，用手指寫或用注音鍵盤打字都可以
+          </p>
+        </section>
+
         {/* Admin toggle — only visible with ?admin=1 */}
         {showAdminToggle && (
           <section className="rounded-2xl border border-pet/30 bg-pet-soft p-4">

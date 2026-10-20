@@ -63,6 +63,20 @@ export type ZhuyinToChar = z.infer<typeof ZhuyinToCharSchema>;
 export type QuestionBankFile = z.infer<typeof QuestionBankFileSchema>;
 
 export type ChoiceQuestion = ReadingChoice | MeaningChoice;
+export type WritingQuestion = FixChar | ZhuyinToChar;
 
 export const CHOICE_TYPES = ["reading_choice", "meaning_choice"] as const;
 export type ChoiceType = (typeof CHOICE_TYPES)[number];
+
+export const WRITING_TYPES = ["fix_char", "zhuyin_to_char"] as const;
+export type WritingType = (typeof WRITING_TYPES)[number];
+
+export const ALL_QUESTION_TYPES = [...CHOICE_TYPES, ...WRITING_TYPES] as const;
+export type QuestionType = (typeof ALL_QUESTION_TYPES)[number];
+
+export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  reading_choice: "字音",
+  meaning_choice: "字義",
+  fix_char: "改錯字",
+  zhuyin_to_char: "注音寫國字",
+};
