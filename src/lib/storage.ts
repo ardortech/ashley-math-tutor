@@ -245,28 +245,83 @@ export function saveTextbook(tb: Textbook): void {
 
 // ── Backup / Restore ──
 
+export interface ChineseAnswerBackup {
+  questionId: string;
+  timesSeen: number;
+  timesWrong: number;
+  lastAnswer: number | string | null;
+  lastSeen: string;
+  lastCorrect: string | null;
+}
+
+export interface FavoriteBackup {
+  id: string;
+  subject: Subject;
+  questionId: string;
+  savedAt: string;
+}
+
 export interface BackupPayload {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   pet: PetState;
   solveLog: SolveEntry[];
   scoredProblemIds: string[];
   textbook: Textbook;
   exportedAt: string;
+  chineseAnswers?: ChineseAnswerBackup[];
+  favorites?: FavoriteBackup[];
 }
 
-export function createBackup(): BackupPayload {
+export async function createBackupAsync(): Promise<BackupPayload> {
+  const [chineseAnswers, favorites] = await Promise.all([
+    import("./chinese/answerRecord").then((m) => m.getAllRecords()),
+    import("./favorites").then((m) => m.getAllFavorites()),
+  ]);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     pet: getPetState(),
     solveLog: getSolveLog(),
     scoredProblemIds: safeGet<string[]>(SCORED_KEY) ?? [],
     textbook: getTextbook(),
     exportedAt: new Date().toISOString(),
+    chineseAnswers,
+    favorites,
+  };
+}
+
+export function createBackup(): BackupPayload {
+  return {
+    schemaVersion: 3,
+    pet: getPetState(),
+    solveLog: getSolveLog(),
+    scoredProblemIds: safeGet<string[]>(SCORED_KEY) ?? [],
+    textbook: getTextbook(),
+    exportedAt: new Date().toISOString(),
+    chineseAnswers: [],
+    favorites: [],
   };
 }
 
 function migrateSolveLog(log: SolveEntry[]): SolveEntry[] {
   return log.map((e) => (e.subject ? e : { ...e, subject: "math" as Subject }));
+}
+
+export async function restoreBackupAsync(data: BackupPayload): Promise<void> {
+  savePetState(data.pet);
+  saveSolveLog(
+    data.schemaVersion === 1 ? migrateSolveLog(data.solveLog) : data.solveLog,
+  );
+  safeSet(SCORED_KEY, data.scoredProblemIds);
+  saveTextbook(data.textbook);
+
+  if (data.chineseAnswers && data.chineseAnswers.length > 0) {
+    const { importRecords } = await import("./chinese/answerRecord");
+    await importRecords(data.chineseAnswers);
+  }
+  if (data.favorites && data.favorites.length > 0) {
+    const { importFavorites } = await import("./favorites");
+    await importFavorites(data.favorites);
+  }
 }
 
 export function restoreBackup(data: BackupPayload): void {
@@ -276,4 +331,5 @@ export function restoreBackup(data: BackupPayload): void {
   );
   safeSet(SCORED_KEY, data.scoredProblemIds);
   saveTextbook(data.textbook);
+  void restoreBackupAsync(data);
 }

@@ -1,6 +1,6 @@
-# 數學小老師 — Build Spec (for Claude Code)
+# 跳跳小老師 — Build Spec (for Claude Code)
 
-> App name: **數學小老師**. Pet name: **跳跳**. A zh-TW math tutoring web app for a 7th grader (國一) in Taiwan, used on an iPad.
+> App name: **跳跳小老師**. Pet name: **跳跳**. A zh-TW math + Chinese tutoring web app for a 7th grader (國一) in Taiwan, used on an iPad.
 > Paste this file into the repo root as `CLAUDE.md` (or `SPEC.md`) and ask Claude Code to build it phase by phase.
 
 ---
@@ -226,7 +226,7 @@ Put the topic list in a config file.
 Primary buttons are big (80–132px tall), rounded, with a solid 8–10px bottom shadow in the pressed color (a "pressable" look).
 
 **Screens (approved mockups):**
-1. **首頁** — header 數學小老師 + settings; 跳跳 card (sitting pose, name, 等級 + progress bar「再解 1 題就升級，解鎖新配件！」, 餵點心 button); huge 「拍下題目，問一題」 button; 今天 / 這星期 counts; 最近解過的題目 list.
+1. **首頁** — header 跳跳小老師 + settings; 跳跳 card (sitting pose, name, 等級 + progress bar「再解 1 題就升級，解鎖新配件！」, 餵點心 button); huge 「拍下題目，問一題」 button; 今天 / 這星期 counts; 最近解過的題目 list.
 2. **確認題目** — top bar: back + 4-step pills (1 確認題目 · 2 一步步解 · 3 批改 · 4 練習); her photo with 旋轉/裁切/重拍; 跳跳 head avatar + bubble 「我看到的題目是這樣，對嗎？」 with the KaTeX problem; buttons 不對，我要修改 / 對！開始解題.
 3. **一步步解** — problem pinned at top with 第 N 步; chat (跳跳 avatar left, her messages right in primary blue); bottom panel: 「我的想法是…」 input, 再給我一點提示 / 我還是卡住了, big 「我懂了！拍下我的算式」.
 4. **批改** — her work photo with the first wrong line outlined (dashed `fix` color, tag 再看一次); 跳跳 curious head + 差一點點 badge + feedback; 給我一點提示 / 改好了，再拍一次.
@@ -266,3 +266,55 @@ The app supports multiple subjects. Each subject has its own route namespace and
 - **Counts:** `getTodayCount(subject?)` and `getWeekCount(subject?)` accept an optional subject filter.
 - **Backup:** `BackupPayload.schemaVersion` is `2`. Restoring a v1 backup auto-migrates `solveLog` entries to `subject: "math"`.
 - **Chinese plan:** see `docs/chinese-plan.md` for the full Chinese subject roadmap.
+
+---
+
+## 11. Chinese question bank & daily practice
+
+### Question bank format
+
+Question files live in `content/chinese/*.json`. Each file has:
+
+```json
+{
+  "bank": "<filename without .json>",
+  "description": "...",
+  "textbook": null | "康軒7上L1",
+  "questions": [ ... ]
+}
+```
+
+Every question has: `id` (unique across all files), `type`, `lesson`, `explanation`, `source`, `verified` (boolean).
+
+**Question types currently implemented (C2):**
+
+| type | Description | Fields |
+|---|---|---|
+| `reading_choice` | 字音選擇 | `context`, `target`, `options` (4 strings), `answer` (0-indexed), `trap?` |
+| `meaning_choice` | 字義選擇 | `context`, `target`, `options` (4 strings), `answer` (0-indexed) |
+
+Types `fix_char` and `zhuyin_to_char` exist in the schema but their UI is deferred to C3.
+
+**Rules:**
+- Only `verified: true` questions are shown to the student. The `?admin=1` toggle shows unverified questions too (for adult testing).
+- Duplicate question IDs across files cause a build failure.
+- The bank is loaded at build time via `import.meta.glob`; adding a new JSON file requires no code change.
+
+### Daily practice (`/chinese/daily`)
+
+- 10 questions per session, selected: wrong answers first → unseen → seen.
+- Progress persists in localStorage; resumable on return.
+- Completing 10 questions triggers CelebrationScreen + `recordSolve({ subject: "chinese" })`.
+- Snacks: +1 per session, +2 if all 10 correct. Single correct answers show a small 跳跳 nod, no celebration.
+
+### Answer records (IndexedDB)
+
+Per-question: `{ questionId, timesSeen, timesWrong, lastAnswer, lastSeen, lastCorrect }`. Used for question selection priority and future spaced repetition (C4).
+
+### Favorites (shared, both subjects)
+
+`{ subject, questionId, savedAt }` stored in IndexedDB. Included in backup (schemaVersion 3). Favorite page deferred to C7.
+
+### Backup schema
+
+`BackupPayload.schemaVersion` is `3`. New fields: `chineseAnswers`, `favorites`. Restoring v1/v2 backups works (missing fields default to `[]`).

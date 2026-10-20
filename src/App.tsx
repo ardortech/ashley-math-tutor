@@ -11,6 +11,7 @@ import GuidedPage from "./pages/GuidedPage";
 import ValidatePage from "./pages/ValidatePage";
 import PracticePage from "./pages/PracticePage";
 import ChineseHomePage from "./pages/ChineseHomePage";
+import ChineseDailyPage from "./pages/ChineseDailyPage";
 import SettingsPage from "./pages/SettingsPage";
 import DressUpPage from "./pages/DressUpPage";
 
@@ -54,6 +55,7 @@ export default function App() {
 
       {/* Chinese routes */}
       <Route path="/chinese" element={guard(<ChineseHomePage />)} />
+      <Route path="/chinese/daily" element={guard(<ChineseDailyPage />)} />
 
       {/* Shared routes */}
       <Route path="/settings" element={guard(<SettingsPage />)} />

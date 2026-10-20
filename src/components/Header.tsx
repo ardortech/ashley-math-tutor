@@ -6,7 +6,7 @@ export default function Header() {
 
   return (
     <header className="flex items-center justify-between px-4 py-3">
-      <h1 className="text-xl font-bold text-ink">數學小老師</h1>
+      <h1 className="text-xl font-bold text-ink">跳跳小老師</h1>
       <button
         onClick={() => navigate("/settings")}
         className="rounded-full p-2 text-muted hover:bg-card-border/40 active:bg-card-border/60 transition-colors"
