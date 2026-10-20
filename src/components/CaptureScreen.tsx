@@ -96,7 +96,7 @@ export default function CaptureScreen({
       onCapture(previewBase64, preview);
       return;
     }
-    navigate("/confirm", {
+    navigate("/math/confirm", {
       state: { imageBase64: previewBase64, imageUrl: preview },
     });
   }, [previewBase64, preview, navigate, onCapture]);

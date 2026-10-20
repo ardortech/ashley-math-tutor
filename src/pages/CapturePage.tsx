@@ -3,5 +3,5 @@ import CaptureScreen from "../components/CaptureScreen";
 
 export default function CapturePage() {
   const navigate = useNavigate();
-  return <CaptureScreen onBack={() => navigate("/")} />;
+  return <CaptureScreen onBack={() => navigate("/math")} />;
 }

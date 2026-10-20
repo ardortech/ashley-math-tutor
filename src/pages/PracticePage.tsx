@@ -20,7 +20,7 @@ import {
   clearPracticeProgress,
 } from "../lib/storage";
 import type { VerifiedPracticeProblem } from "../lib/storage";
-import { scoreCorrectAnswer, type ScoreResult } from "../lib/scoring";
+import { recordSolve, type ScoreResult } from "../lib/scoring";
 
 interface LocationState {
   problem_text: string;
@@ -87,7 +87,7 @@ export default function PracticePage() {
     if (problems.length > 0) return;
 
     if (!originText || !topic) {
-      navigate("/", { replace: true });
+      navigate("/math", { replace: true });
       return;
     }
 
@@ -220,7 +220,13 @@ export default function PracticePage() {
 
   const doScoreCorrect = useCallback(
     (prob: VerifiedPracticeProblem): ScoreResult => {
-      return scoreCorrectAnswer(prob.problemId, topic, true, 1);
+      return recordSolve({
+        subject: "math",
+        problemId: prob.problemId,
+        topic,
+        usedHints: true,
+        snackAmount: 1,
+      });
     },
     [topic],
   );
@@ -344,7 +350,7 @@ export default function PracticePage() {
 
   const handleGetHint = useCallback(() => {
     if (!currentProblem) return;
-    navigate("/guided", {
+    navigate("/math/guided", {
       state: {
         solve: currentProblem.solve,
         problem: {
@@ -379,7 +385,7 @@ export default function PracticePage() {
 
   const handleGoHome = useCallback(() => {
     clearPracticeProgress();
-    navigate("/", { replace: true });
+    navigate("/math", { replace: true });
   }, [navigate]);
 
   // === LOADING ===

@@ -12,7 +12,7 @@ import {
   saveProgress,
   clearProgress,
 } from "../lib/storage";
-import { scoreCorrectAnswer, type ScoreResult } from "../lib/scoring";
+import { recordSolve, type ScoreResult } from "../lib/scoring";
 
 interface LocationState {
   solve: SolveResult;
@@ -50,7 +50,7 @@ export default function ValidatePage() {
 
   useEffect(() => {
     if (!solve || !problem || !problemId) {
-      navigate("/", { replace: true });
+      navigate("/math", { replace: true });
     }
   }, [solve, problem, problemId, navigate]);
 
@@ -92,18 +92,19 @@ export default function ValidatePage() {
           result.result === "partially_correct"
         ) {
           if (practiceMode) {
-            navigate("/practice", { replace: true });
+            navigate("/math/practice", { replace: true });
             return;
           }
 
           const firstTryNoHints = currentAttempt === 1 && !usedHints;
           const snackAmount = firstTryNoHints ? 2 : 1;
-          const score = scoreCorrectAnswer(
+          const score = recordSolve({
+            subject: "math",
             problemId,
-            problem.topic ?? solve.topic,
+            topic: problem.topic ?? solve.topic,
             usedHints,
             snackAmount,
-          );
+          });
 
           clearProgress();
           setPhase({ step: "success", data: result, score });
@@ -159,7 +160,7 @@ export default function ValidatePage() {
           messages: [],
         });
       }
-      navigate("/guided", {
+      navigate("/math/guided", {
         state: {
           solve,
           problem,
@@ -233,7 +234,7 @@ export default function ValidatePage() {
           <>
             <button
               onClick={() =>
-                navigate("/practice", {
+                navigate("/math/practice", {
                   state: {
                     problem_text: problem.problem_text,
                     topic: problem.topic ?? solve.topic,
@@ -252,7 +253,7 @@ export default function ValidatePage() {
               className="w-full rounded-[24px] border-2 border-card-border bg-card px-6 py-5 text-lg font-bold text-ink
                 active:bg-card-border/30 transition-colors"
             >
-              今天先到這裡
+              回首頁
             </button>
           </>
         }

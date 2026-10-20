@@ -16,10 +16,13 @@ export interface PetState {
   equippedAccessories: string[];
 }
 
+export type Subject = "math" | "chinese";
+
 export interface SolveEntry {
   date: string;
   topic: string;
   usedHints: boolean;
+  subject?: Subject;
 }
 
 function localDateString(d: Date = new Date()): string {
@@ -72,23 +75,28 @@ export function saveSolveLog(log: SolveEntry[]): void {
   safeSet(SOLVE_LOG_KEY, log);
 }
 
-export function addSolveEntry(topic: string, usedHints: boolean): void {
+export function addSolveEntry(topic: string, usedHints: boolean, subject: Subject = "math"): void {
   const log = getSolveLog();
-  log.push({ date: localDateString(), topic, usedHints });
+  log.push({ date: localDateString(), topic, usedHints, subject });
   saveSolveLog(log);
 }
 
-export function getTodayCount(): number {
-  const today = localDateString();
-  return getSolveLog().filter((e) => e.date === today).length;
+function matchSubject(entry: SolveEntry, subject?: Subject): boolean {
+  if (!subject) return true;
+  return (entry.subject ?? "math") === subject;
 }
 
-export function getWeekCount(): number {
+export function getTodayCount(subject?: Subject): number {
+  const today = localDateString();
+  return getSolveLog().filter((e) => e.date === today && matchSubject(e, subject)).length;
+}
+
+export function getWeekCount(subject?: Subject): number {
   const now = new Date();
   const dayOfWeek = now.getDay() || 7;
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek + 1);
   const mondayStr = localDateString(monday);
-  return getSolveLog().filter((e) => e.date >= mondayStr).length;
+  return getSolveLog().filter((e) => e.date >= mondayStr && matchSubject(e, subject)).length;
 }
 
 export function getDeviceId(): string {
@@ -238,7 +246,7 @@ export function saveTextbook(tb: Textbook): void {
 // ── Backup / Restore ──
 
 export interface BackupPayload {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   pet: PetState;
   solveLog: SolveEntry[];
   scoredProblemIds: string[];
@@ -248,7 +256,7 @@ export interface BackupPayload {
 
 export function createBackup(): BackupPayload {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     pet: getPetState(),
     solveLog: getSolveLog(),
     scoredProblemIds: safeGet<string[]>(SCORED_KEY) ?? [],
@@ -257,9 +265,15 @@ export function createBackup(): BackupPayload {
   };
 }
 
+function migrateSolveLog(log: SolveEntry[]): SolveEntry[] {
+  return log.map((e) => (e.subject ? e : { ...e, subject: "math" as Subject }));
+}
+
 export function restoreBackup(data: BackupPayload): void {
   savePetState(data.pet);
-  saveSolveLog(data.solveLog);
+  saveSolveLog(
+    data.schemaVersion === 1 ? migrateSolveLog(data.solveLog) : data.solveLog,
+  );
   safeSet(SCORED_KEY, data.scoredProblemIds);
   saveTextbook(data.textbook);
 }

@@ -4,6 +4,7 @@ import {
   addSolveEntry,
   isScoredProblem,
   markProblemScored,
+  type Subject,
 } from "./storage";
 import {
   levelFromSolves,
@@ -22,12 +23,15 @@ export interface ScoreResult {
   equippedAccessories: string[];
 }
 
-export function scoreCorrectAnswer(
-  problemId: string,
-  topic: string,
-  usedHints: boolean,
-  snackAmount: number,
-): ScoreResult {
+export function recordSolve(opts: {
+  subject: Subject;
+  problemId: string;
+  topic: string;
+  usedHints: boolean;
+  snackAmount: number;
+}): ScoreResult {
+  const { subject, problemId, topic, usedHints, snackAmount } = opts;
+
   if (isScoredProblem(problemId)) {
     const pet = getPetState();
     return {
@@ -42,7 +46,7 @@ export function scoreCorrectAnswer(
   }
 
   markProblemScored(problemId);
-  addSolveEntry(topic, usedHints);
+  addSolveEntry(topic, usedHints, subject);
 
   const pet = getPetState();
   const prevCount = pet.solvedCount;

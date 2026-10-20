@@ -29,7 +29,7 @@ export default function ConfirmPage() {
 
   useEffect(() => {
     if (!imageBase64) {
-      navigate("/capture", { replace: true });
+      navigate("/math/capture", { replace: true });
       return;
     }
 
@@ -95,7 +95,7 @@ export default function ConfirmPage() {
   );
 
   const handleRetake = useCallback(() => {
-    navigate("/capture", { replace: true });
+    navigate("/math/capture", { replace: true });
   }, [navigate]);
 
   // --- Analyzing ---
@@ -305,7 +305,7 @@ export default function ConfirmPage() {
                   usedHints: true,
                   attempt: 1,
                 });
-                navigate("/guided", {
+                navigate("/math/guided", {
                   state: {
                     solve: phase.solve,
                     problem: phase.problem,
@@ -332,7 +332,7 @@ export default function ConfirmPage() {
                   usedHints: false,
                   attempt: 1,
                 });
-                navigate("/validate", {
+                navigate("/math/validate", {
                   state: {
                     solve: phase.solve,
                     problem: phase.problem,

@@ -6,15 +6,26 @@ import {
   saveTextbook,
   createBackup,
   restoreBackup,
+  getSolveLog,
+  getTodayCount,
+  getWeekCount,
   type Textbook,
   type BackupPayload,
+  type Subject,
 } from "../lib/storage";
 import { levelFromSolves } from "../lib/accessories";
 
 const TEXTBOOK_OPTIONS: Textbook[] = ["康軒", "南一", "翰林"];
 
+const SolveEntrySchema = z.object({
+  date: z.string(),
+  topic: z.string(),
+  usedHints: z.boolean(),
+  subject: z.enum(["math", "chinese"]).optional(),
+});
+
 const BackupSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]),
   pet: z.object({
     schemaVersion: z.literal(1),
     name: z.string(),
@@ -23,13 +34,7 @@ const BackupSchema = z.object({
     accessories: z.array(z.string()),
     equippedAccessories: z.array(z.string()),
   }),
-  solveLog: z.array(
-    z.object({
-      date: z.string(),
-      topic: z.string(),
-      usedHints: z.boolean(),
-    }),
-  ),
+  solveLog: z.array(SolveEntrySchema),
   scoredProblemIds: z.array(z.string()),
   textbook: z.enum(["康軒", "南一", "翰林"]).optional().default("康軒"),
   exportedAt: z.string().optional(),
@@ -58,6 +63,11 @@ function decodeBackup(code: string): BackupPayload | null {
   return null;
 }
 
+const SUBJECTS: { key: Subject; label: string }[] = [
+  { key: "math", label: "數學" },
+  { key: "chinese", label: "國文" },
+];
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [textbook, setTextbook] = useState<Textbook>(getTextbook);
@@ -67,6 +77,7 @@ export default function SettingsPage() {
   const [restorePreview, setRestorePreview] = useState<BackupPayload | null>(null);
   const [restoreError, setRestoreError] = useState("");
   const [restoreSuccess, setRestoreSuccess] = useState(false);
+  const [recordsTab, setRecordsTab] = useState<Subject>("math");
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -138,6 +149,11 @@ export default function SettingsPage() {
     setRestorePreview(null);
   }, [restorePreview]);
 
+  const solveLog = getSolveLog();
+  const subjectLog = solveLog.filter(
+    (e) => (e.subject ?? "math") === recordsTab,
+  );
+
   return (
     <div className="min-h-dvh bg-bg pb-8">
       <header className="flex items-center gap-3 px-4 py-3">
@@ -153,6 +169,40 @@ export default function SettingsPage() {
       </header>
 
       <div className="px-4 space-y-6">
+        {/* Learning records */}
+        <section className="rounded-2xl border border-card-border bg-card p-4">
+          <h2 className="text-base font-bold text-ink mb-3">學習紀錄</h2>
+          <div className="flex gap-2 mb-3">
+            {SUBJECTS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setRecordsTab(s.key)}
+                className={`flex-1 rounded-xl py-2 text-sm font-medium transition-colors
+                  ${recordsTab === s.key
+                    ? "bg-primary text-white"
+                    : "bg-bg border border-card-border text-ink hover:bg-card-border/30"
+                  }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1 rounded-xl bg-bg p-3 text-center">
+              <p className="text-xl font-bold text-ink">{getTodayCount(recordsTab)}</p>
+              <p className="text-xs text-muted">今天</p>
+            </div>
+            <div className="flex-1 rounded-xl bg-bg p-3 text-center">
+              <p className="text-xl font-bold text-ink">{getWeekCount(recordsTab)}</p>
+              <p className="text-xs text-muted">本週</p>
+            </div>
+            <div className="flex-1 rounded-xl bg-bg p-3 text-center">
+              <p className="text-xl font-bold text-ink">{subjectLog.length}</p>
+              <p className="text-xs text-muted">總共</p>
+            </div>
+          </div>
+        </section>
+
         {/* Textbook */}
         <section className="rounded-2xl border border-card-border bg-card p-4">
           <h2 className="text-base font-bold text-ink mb-2">課本版本</h2>

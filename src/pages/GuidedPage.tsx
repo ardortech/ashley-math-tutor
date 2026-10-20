@@ -49,7 +49,7 @@ export default function GuidedPage() {
 
   useEffect(() => {
     if (!solve || !problem) {
-      navigate("/", { replace: true });
+      navigate("/math", { replace: true });
     }
   }, [solve, problem, navigate]);
 
@@ -162,17 +162,17 @@ export default function GuidedPage() {
 
   const handleSkip = useCallback(() => {
     if (practiceMode) {
-      navigate("/practice", { replace: true });
+      navigate("/math/practice", { replace: true });
       return;
     }
-    navigate("/validate", {
+    navigate("/math/validate", {
       state: { solve, problem, usedHints, problemId },
       replace: true,
     });
   }, [navigate, solve, problem, usedHints, problemId, practiceMode]);
 
   const handleTakePhoto = useCallback(() => {
-    navigate("/validate", {
+    navigate("/math/validate", {
       state: { solve, problem, usedHints, problemId, practiceMode, practiceIndex },
       replace: true,
     });
