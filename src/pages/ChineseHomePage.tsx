@@ -1,22 +1,19 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTodaySessionProgress } from "../lib/chinese/dailySession";
-import { getChoiceTypeStats } from "../lib/chinese/questionBank";
+import { getTypeStats } from "../lib/chinese/questionBank";
 import { getAllRecords } from "../lib/chinese/answerRecord";
 import { getAdminMode, isAdminUrl } from "../lib/chinese/dailySession";
-import type { ChoiceType } from "../lib/chinese/schema";
+import { ALL_QUESTION_TYPES, type QuestionType } from "../lib/chinese/schema";
 
 export default function ChineseHomePage() {
   const navigate = useNavigate();
   const sessionProgress = getTodaySessionProgress();
   const showAdmin = isAdminUrl();
   const includeUnverified = getAdminMode();
-  const typeStats = getChoiceTypeStats(includeUnverified);
+  const typeStats = getTypeStats(includeUnverified);
 
-  const [accuracyMap, setAccuracyMap] = useState<Record<ChoiceType, number | null>>({
-    reading_choice: null,
-    meaning_choice: null,
-  });
+  const [accuracyMap, setAccuracyMap] = useState<Record<string, number | null>>({});
 
   useEffect(() => {
     void (async () => {
@@ -24,22 +21,24 @@ export default function ChineseHomePage() {
       const byType: Record<string, { seen: number; wrong: number }> = {};
       for (const r of records) {
         const qId = r.questionId;
-        const type = qId.startsWith("rd-") ? "reading_choice"
-          : qId.startsWith("mn-") ? "meaning_choice"
-          : null;
+        let type: string | null = null;
+        if (qId.startsWith("rd-")) type = "reading_choice";
+        else if (qId.startsWith("mn-")) type = "meaning_choice";
+        else if (qId.startsWith("fix-")) type = "fix_char";
+        else if (qId.startsWith("zc-")) type = "zhuyin_to_char";
         if (!type) continue;
         if (!byType[type]) byType[type] = { seen: 0, wrong: 0 };
-        byType[type].seen += r.timesSeen;
-        byType[type].wrong += r.timesWrong;
+        byType[type]!.seen += r.timesSeen;
+        byType[type]!.wrong += r.timesWrong;
       }
-      setAccuracyMap({
-        reading_choice: byType["reading_choice"]?.seen
-          ? Math.round(((byType["reading_choice"].seen - byType["reading_choice"].wrong) / byType["reading_choice"].seen) * 100)
-          : null,
-        meaning_choice: byType["meaning_choice"]?.seen
-          ? Math.round(((byType["meaning_choice"].seen - byType["meaning_choice"].wrong) / byType["meaning_choice"].seen) * 100)
-          : null,
-      });
+      const map: Record<string, number | null> = {};
+      for (const t of ALL_QUESTION_TYPES) {
+        const entry = byType[t];
+        map[t] = entry?.seen
+          ? Math.round(((entry.seen - entry.wrong) / entry.seen) * 100)
+          : null;
+      }
+      setAccuracyMap(map);
     })();
   }, []);
 
@@ -75,7 +74,7 @@ export default function ChineseHomePage() {
                 </p>
               ) : (
                 <p className="text-sm text-muted">
-                  字音、字義每日 10 題
+                  混合題型每日 10 題
                 </p>
               )}
             </div>
@@ -111,9 +110,9 @@ export default function ChineseHomePage() {
       <div className="px-4 mt-5">
         <h2 className="text-base font-bold text-ink mb-3">練某一種題型</h2>
         <div className="space-y-2">
-          {(["reading_choice", "meaning_choice"] as const).map((type) => {
+          {(ALL_QUESTION_TYPES as readonly QuestionType[]).map((type) => {
             const stat = typeStats[type];
-            const acc = accuracyMap[type];
+            const acc = accuracyMap[type] ?? null;
             return (
               <button
                 key={type}

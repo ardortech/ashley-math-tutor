@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ChoiceQuestionUI from "../components/chinese/ChoiceQuestion";
+import FixCharQuestionUI from "../components/chinese/FixCharQuestion";
+import ZhuyinToCharQuestionUI from "../components/chinese/ZhuyinToCharQuestion";
 import CelebrationScreen from "../components/CelebrationScreen";
 import { getQuestionById } from "../lib/chinese/questionBank";
 import { recordAnswer } from "../lib/chinese/answerRecord";
@@ -14,7 +16,7 @@ import {
   type DailySession,
 } from "../lib/chinese/dailySession";
 import { recordSolve, type ScoreResult } from "../lib/scoring";
-import type { ChoiceQuestion, ChoiceType } from "../lib/chinese/schema";
+import type { ChoiceQuestion, FixChar, ZhuyinToChar, QuestionType } from "../lib/chinese/schema";
 
 function localDateString(): string {
   const d = new Date();
@@ -27,7 +29,7 @@ function localDateString(): string {
 export default function ChineseDailyPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const filterType = searchParams.get("type") as ChoiceType | null;
+  const filterType = searchParams.get("type") as QuestionType | null;
 
   const [session, setSession] = useState<DailySession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,7 +134,7 @@ export default function ChineseDailyPage() {
     );
   }
 
-  if (!question || !("options" in question)) {
+  if (!question) {
     return (
       <div className="min-h-dvh bg-bg flex items-center justify-center">
         <p className="text-muted">沒有可用的題目</p>
@@ -140,14 +142,13 @@ export default function ChineseDailyPage() {
     );
   }
 
-  const choiceQ = question as ChoiceQuestion;
   const progress = total > 0 ? (answeredCount / total) * 100 : 0;
 
-  const handleAnswer = async (selectedIndex: number, isCorrect: boolean) => {
+  const handleAnswer = async (answer: number | string, isCorrect: boolean) => {
     const updated: DailySession = {
       ...session,
       answers: session.answers.map((a, i) =>
-        i === session.currentIndex ? selectedIndex : a,
+        i === session.currentIndex ? answer : a,
       ),
       correct: session.correct.map((c, i) =>
         i === session.currentIndex ? isCorrect : c,
@@ -156,7 +157,7 @@ export default function ChineseDailyPage() {
     setSession(updated);
     saveDailySession(updated);
 
-    await recordAnswer(choiceQ.id, isCorrect, selectedIndex, localDateString());
+    await recordAnswer(question.id, isCorrect, answer, localDateString());
   };
 
   const handleNext = async () => {
@@ -193,7 +194,7 @@ export default function ChineseDailyPage() {
   };
 
   const handleToggleFavorite = async () => {
-    const nowFav = await toggleFavorite("chinese", choiceQ.id);
+    const nowFav = await toggleFavorite("chinese", question.id);
     setFavorited(nowFav);
     setToast(nowFav ? "已加入收藏" : "已取消收藏");
     setTimeout(() => setToast(null), 1500);
@@ -202,6 +203,47 @@ export default function ChineseDailyPage() {
   const handleClose = () => {
     saveDailySession(session);
     navigate("/chinese");
+  };
+
+  const renderQuestion = () => {
+    switch (question.type) {
+      case "reading_choice":
+      case "meaning_choice":
+        return (
+          <ChoiceQuestionUI
+            question={question as ChoiceQuestion}
+            showUnverifiedBadge={includeUnverified}
+            isFavorited={favorited}
+            onToggleFavorite={handleToggleFavorite}
+            onAnswer={(idx, correct) => handleAnswer(idx, correct)}
+            onNext={handleNext}
+          />
+        );
+      case "fix_char":
+        return (
+          <FixCharQuestionUI
+            question={question as FixChar}
+            showUnverifiedBadge={includeUnverified}
+            isFavorited={favorited}
+            onToggleFavorite={handleToggleFavorite}
+            onAnswer={(ans, correct) => handleAnswer(ans, correct)}
+            onNext={handleNext}
+          />
+        );
+      case "zhuyin_to_char":
+        return (
+          <ZhuyinToCharQuestionUI
+            question={question as ZhuyinToChar}
+            showUnverifiedBadge={includeUnverified}
+            isFavorited={favorited}
+            onToggleFavorite={handleToggleFavorite}
+            onAnswer={(ans, correct) => handleAnswer(ans, correct)}
+            onNext={handleNext}
+          />
+        );
+      default:
+        return <p className="text-muted text-center">不支援的題型</p>;
+    }
   };
 
   return (
@@ -243,14 +285,7 @@ export default function ChineseDailyPage() {
 
       {/* Question area */}
       <div className="flex-1 px-4 pb-6 flex flex-col">
-        <ChoiceQuestionUI
-          question={choiceQ}
-          showUnverifiedBadge={includeUnverified}
-          isFavorited={favorited}
-          onToggleFavorite={handleToggleFavorite}
-          onAnswer={handleAnswer}
-          onNext={handleNext}
-        />
+        {renderQuestion()}
       </div>
 
       {/* Toast */}

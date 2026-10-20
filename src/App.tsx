@@ -16,6 +16,7 @@ import SettingsPage from "./pages/SettingsPage";
 import DressUpPage from "./pages/DressUpPage";
 
 const DevPetPage = lazy(() => import("./pages/DevPetPage"));
+const DevZhuyinPage = lazy(() => import("./pages/DevZhuyinPage"));
 
 export default function App() {
   const [authed, setAuthed] = useState(() => !!getPin());
@@ -61,6 +62,7 @@ export default function App() {
       <Route path="/settings" element={guard(<SettingsPage />)} />
       <Route path="/dress-up" element={guard(<DressUpPage />)} />
       <Route path="/dev/pet" element={<Suspense fallback={<div className="p-4">Loading...</div>}><DevPetPage /></Suspense>} />
+      <Route path="/dev/zhuyin" element={<Suspense fallback={<div className="p-4">Loading...</div>}><DevZhuyinPage /></Suspense>} />
     </Routes>
   );
 }
