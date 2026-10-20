@@ -58,7 +58,8 @@ export default function PetCard({
               enabled:hover:bg-pet/20 enabled:active:bg-pet/30 transition-colors
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            🦴 餵點心
+            <img src="/icons/feed-snack-bag.svg" alt="" width={28} height={28} className="shrink-0" />
+            餵點心
             <span className="text-xs text-muted">({snacks})</span>
           </button>
         </div>

@@ -364,7 +364,7 @@ export default function SettingsPage() {
 
         {/* Scribble reminder */}
         <section className="rounded-2xl border border-card-border bg-card p-4">
-          <h2 className="text-base font-bold text-ink mb-2">✏️ 隨手寫小提醒</h2>
+          <h2 className="text-base font-bold text-ink mb-2">隨手寫小提醒</h2>
           <p className="text-sm text-ink leading-relaxed mb-2">
             國文的「改錯字」和「注音寫國字」可以用 Apple Pencil 直接在格子裡寫字。
             要先確認 iPad 的隨手寫功能有打開：

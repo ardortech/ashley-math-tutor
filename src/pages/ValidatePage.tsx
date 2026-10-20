@@ -4,6 +4,7 @@ import StepPills from "../components/StepPills";
 import CaptureScreen from "../components/CaptureScreen";
 import MathText from "../components/MathText";
 import CelebrationScreen from "../components/CelebrationScreen";
+import CameraIcon from "../components/icons/CameraIcon";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
 import { validateWork, ApiError } from "../lib/api";
 import type { AnalyzeProblem, SolveResult, ValidateResult } from "../lib/api";
@@ -127,7 +128,7 @@ export default function ValidatePage() {
             lines: [],
             first_error_line_index: null,
             related_step_index: null,
-            feedback: `⚠️ ${msg}`,
+            feedback: msg,
           },
         });
       }
@@ -187,7 +188,7 @@ export default function ValidatePage() {
         <CaptureScreen
           onBack={() => navigate(-1)}
           onCapture={handleCapture}
-          buttonLabel="📷 拍下我的算式"
+          buttonLabel={<span className="inline-flex items-center gap-2"><CameraIcon className="w-5 h-5" />拍下我的算式</span>}
           sendLabel="確認送出"
         />
       </div>
@@ -297,7 +298,7 @@ export default function ValidatePage() {
                 active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
                 transition-all"
             >
-              📷 再拍一次
+              <span className="inline-flex items-center gap-2"><CameraIcon className="w-5 h-5" />再拍一次</span>
             </button>
           </>
         ) : (

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import HandwritingInput from "./HandwritingInput";
 import PracticeCanvas from "./PracticeCanvas";
+import PencilIcon from "../icons/PencilIcon";
+import StarIcon from "../icons/StarIcon";
 import TiaoTiaoHeadHappy from "../pet/TiaoTiaoHeadHappy";
 import TiaoTiaoHeadCurious from "../pet/TiaoTiaoHeadCurious";
 import type { ZhuyinToChar } from "../../lib/chinese/schema";
@@ -228,7 +230,7 @@ export default function ZhuyinToCharQuestion({
               className="w-full rounded-2xl border border-card-border bg-card p-3 text-sm font-medium text-primary
                 active:bg-primary-soft transition-colors mb-4"
             >
-              ✏️ 用筆練寫一次「{question.answer}」
+              <span className="inline-flex items-center gap-1.5"><PencilIcon className="w-4 h-4" /> 用筆練寫一次「{question.answer}」</span>
             </button>
           )}
           {showPractice && (
@@ -249,8 +251,9 @@ export default function ZhuyinToCharQuestion({
                   ? "border-pet bg-pet-soft text-pet"
                   : "border-card-border bg-card text-muted"
                 }`}
+              aria-label={isFavorited ? "取消收藏" : "收藏這題"}
             >
-              {isFavorited ? "★" : "☆"}
+              <StarIcon filled={isFavorited} className="w-5 h-5" />
             </button>
             <button
               onClick={onNext}
