@@ -6,7 +6,7 @@ import { loadImage, compressImage, bitmapToObjectUrl } from "../lib/imageUtils";
 interface CaptureScreenProps {
   onBack?: () => void;
   onCapture?: (base64: string, url: string) => void;
-  buttonLabel?: string;
+  buttonLabel?: React.ReactNode;
   sendLabel?: string;
 }
 

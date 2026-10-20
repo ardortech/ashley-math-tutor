@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import StepPills from "../components/StepPills";
 import MathText from "../components/MathText";
+import CameraIcon from "../components/icons/CameraIcon";
 import TiaoTiaoHeadHappy from "../components/pet/TiaoTiaoHeadHappy";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
 import { requestHint, ApiError } from "../lib/api";
@@ -102,7 +103,7 @@ export default function GuidedPage() {
           err instanceof ApiError ? err.message : "提示產生失敗，請再試一次";
         setMessages((prev) => [
           ...prev,
-          { role: "tutor", text: `⚠️ ${msg}` },
+          { role: "tutor", text: msg },
         ]);
       } finally {
         setLoading(false);
@@ -279,7 +280,7 @@ export default function GuidedPage() {
               active:translate-y-1 active:shadow-[0_4px_0_0_var(--color-primary-pressed)]
               transition-all"
           >
-            📷 拍下我的算式
+            <span className="inline-flex items-center gap-2"><CameraIcon className="w-5 h-5" />拍下我的算式</span>
           </button>
         ) : (
           <>

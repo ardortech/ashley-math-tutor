@@ -110,7 +110,7 @@ export default function CelebrationScreen({
         {/* snacks earned */}
         {snacksEarned > 0 && (
           <div className="mt-4 rounded-2xl bg-pet-soft px-5 py-3 flex items-center gap-2">
-            <span className="text-2xl">🦴</span>
+            <img src="/icons/feed-snack-bag.svg" alt="" width={28} height={28} />
             <span className="text-pet font-bold text-lg">
               點心 +{snacksEarned}
             </span>

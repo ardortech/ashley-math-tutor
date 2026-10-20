@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import ChoiceQuestionUI from "../components/chinese/ChoiceQuestion";
 import FixCharQuestionUI from "../components/chinese/FixCharQuestion";
 import ZhuyinToCharQuestionUI from "../components/chinese/ZhuyinToCharQuestion";
+import StarIcon from "../components/icons/StarIcon";
 import CelebrationScreen from "../components/CelebrationScreen";
 import { getQuestionById } from "../lib/chinese/questionBank";
 import { recordAnswer } from "../lib/chinese/answerRecord";
@@ -276,10 +277,10 @@ export default function ChineseDailyPage() {
 
         <button
           onClick={handleToggleFavorite}
-          className={`text-xl transition-colors ${favorited ? "text-pet" : "text-muted"}`}
-          aria-label={favorited ? "取消收藏" : "收藏"}
+          className="transition-colors"
+          aria-label={favorited ? "取消收藏" : "收藏這題"}
         >
-          {favorited ? "★" : "☆"}
+          <StarIcon filled={favorited} className="w-6 h-6" />
         </button>
       </div>
 

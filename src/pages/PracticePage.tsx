@@ -4,6 +4,7 @@ import StepPills from "../components/StepPills";
 import CaptureScreen from "../components/CaptureScreen";
 import MathText from "../components/MathText";
 import CelebrationScreen from "../components/CelebrationScreen";
+import CameraIcon from "../components/icons/CameraIcon";
 import TiaoTiaoHeadHappy from "../components/pet/TiaoTiaoHeadHappy";
 import TiaoTiaoHeadCurious from "../components/pet/TiaoTiaoHeadCurious";
 import {
@@ -292,7 +293,7 @@ export default function PracticePage() {
     } catch (err) {
       const msg =
         err instanceof ApiError ? err.message : "批改失敗，請再試一次";
-      setPhase({ step: "incorrect", feedback: `⚠️ ${msg}` });
+      setPhase({ step: "incorrect", feedback: msg });
     }
   }, [answerText, currentProblem, attempts, completed, currentIndex, problems, persist, doScoreCorrect]);
 
@@ -329,7 +330,7 @@ export default function PracticePage() {
       } catch (err) {
         const msg =
           err instanceof ApiError ? err.message : "批改失敗，請再試一次";
-        setPhase({ step: "incorrect", feedback: `⚠️ ${msg}` });
+        setPhase({ step: "incorrect", feedback: msg });
       }
     },
     [currentProblem, attempts, completed, currentIndex, problems, persist, doScoreCorrect],
@@ -447,7 +448,7 @@ export default function PracticePage() {
         <CaptureScreen
           onBack={() => setPhase({ step: "answering" })}
           onCapture={(base64) => handlePhotoCapture(base64)}
-          buttonLabel="📷 拍下我的算式"
+          buttonLabel={<span className="inline-flex items-center gap-2"><CameraIcon className="w-5 h-5" />拍下我的算式</span>}
           sendLabel="確認送出"
         />
       </div>
@@ -673,7 +674,7 @@ export default function PracticePage() {
             className="w-full rounded-[24px] border-2 border-primary bg-primary-soft px-6 py-5 text-lg font-bold text-primary
               active:bg-primary/10 transition-colors"
           >
-            📷 拍下我的算式
+            <span className="inline-flex items-center gap-2 justify-center w-full"><CameraIcon className="w-5 h-5" />拍下我的算式</span>
           </button>
           <button
             onClick={handleGetHint}

@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import TiaoTiaoWithAccessories from "../components/pet/TiaoTiaoWithAccessories";
+import PetActionIcon from "../components/icons/PetActionIcon";
+import HeartIcon from "../components/icons/HeartIcon";
 import { usePetState } from "../hooks/usePetState";
 import { getTodayCount } from "../lib/storage";
 import { resolveEquipped, nextThreshold } from "../lib/accessories";
@@ -68,13 +70,13 @@ export default function LandingPage() {
               />
             </button>
             {feedingState === "flying" && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 text-2xl bone-fly">
-                🦴
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 bone-fly">
+                <img src="/icons/feed-snack-bag.svg" alt="" width={28} height={28} />
               </span>
             )}
             {feedingState === "hearts" && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 text-xl hearts-pop">
-                ❤️
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 hearts-pop text-fix">
+                <HeartIcon className="w-6 h-6" />
               </span>
             )}
           </div>
@@ -107,7 +109,7 @@ export default function LandingPage() {
                   enabled:hover:bg-pet/20 enabled:active:bg-pet/30 transition-colors
                   disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                🦴 餵點心
+                <PetActionIcon src="/icons/feed-snack-bag.svg" label="餵點心" />
                 <span className="text-xs text-muted">({pet.snacks})</span>
               </button>
               <button
@@ -115,7 +117,7 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1.5 text-sm font-medium text-primary
                   hover:bg-primary/10 active:bg-primary/20 transition-colors"
               >
-                👕 換裝
+                <PetActionIcon src="/icons/dress-up-collar.svg" label="換裝" />
               </button>
             </div>
           </div>

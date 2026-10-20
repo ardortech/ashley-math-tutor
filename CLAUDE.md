@@ -225,6 +225,8 @@ Put the topic list in a config file.
 
 Primary buttons are big (80–132px tall), rounded, with a solid 8–10px bottom shadow in the pressed color (a "pressable" look).
 
+- **No emoji:** Do not use emoji anywhere in the UI. Use SVG line icons (stroke, round linecap, `currentColor`) or image files from `public/icons/` instead.
+
 **Screens (approved mockups):**
 1. **首頁** — header 跳跳小老師 + settings; 跳跳 card (sitting pose, name, 等級 + progress bar「再解 1 題就升級，解鎖新配件！」, 餵點心 button); huge 「拍下題目，問一題」 button; 今天 / 這星期 counts; 最近解過的題目 list.
 2. **確認題目** — top bar: back + 4-step pills (1 確認題目 · 2 一步步解 · 3 批改 · 4 練習); her photo with 旋轉/裁切/重拍; 跳跳 head avatar + bubble 「我看到的題目是這樣，對嗎？」 with the KaTeX problem; buttons 不對，我要修改 / 對！開始解題.

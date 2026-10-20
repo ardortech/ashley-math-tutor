@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import TiaoTiaoHeadHappy from "../pet/TiaoTiaoHeadHappy";
+import StarIcon from "../icons/StarIcon";
 import type { ChoiceQuestion as ChoiceQ } from "../../lib/chinese/schema";
 
 interface Props {
@@ -175,9 +176,9 @@ export default function ChoiceQuestionUI({
                 ? "border-pet bg-pet-soft text-pet"
                 : "border-card-border bg-card text-muted"
               }`}
-            aria-label={isFavorited ? "取消收藏" : "加入收藏"}
+            aria-label={isFavorited ? "取消收藏" : "收藏這題"}
           >
-            {isFavorited ? "★" : "☆"}
+            <StarIcon filled={isFavorited} className="w-5 h-5" />
           </button>
           <button
             onClick={onNext}
