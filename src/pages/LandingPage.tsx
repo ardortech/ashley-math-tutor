@@ -1,10 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import TiaoTiaoWithAccessories from "../components/pet/TiaoTiaoWithAccessories";
 import { usePetState } from "../hooks/usePetState";
 import { getTodayCount } from "../lib/storage";
 import { resolveEquipped, nextThreshold } from "../lib/accessories";
+import { getFavoriteCount } from "../lib/favorites";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -13,6 +14,19 @@ export default function LandingPage() {
   const chineseToday = getTodayCount("chinese");
   const [tapReaction, setTapReaction] = useState<string | null>(null);
   const [feedingState, setFeedingState] = useState<"idle" | "flying" | "hearts">("idle");
+  const [mathFavCount, setMathFavCount] = useState(0);
+  const [chineseFavCount, setChineseFavCount] = useState(0);
+
+  useEffect(() => {
+    void (async () => {
+      const [mf, cf] = await Promise.all([
+        getFavoriteCount("math"),
+        getFavoriteCount("chinese"),
+      ]);
+      setMathFavCount(mf);
+      setChineseFavCount(cf);
+    })();
+  }, []);
 
   const resolved = resolveEquipped(pet.equippedAccessories);
   const next = nextThreshold(pet.solvedCount);
@@ -156,7 +170,7 @@ export default function LandingPage() {
       <div className="px-4 mt-5">
         <div className="rounded-2xl border border-card-border bg-card p-4 flex items-center justify-between">
           <span className="text-sm font-medium text-ink">我的收藏</span>
-          <span className="text-sm text-muted">數學 0 題 · 國文 0 題</span>
+          <span className="text-sm text-muted">數學 {mathFavCount} 題 · 國文 {chineseFavCount} 題</span>
         </div>
       </div>
     </div>

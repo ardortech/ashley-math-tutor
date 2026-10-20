@@ -10,9 +10,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "數學小老師",
-        short_name: "數學小老師",
-        description: "跳跳陪你學數學",
+        name: "跳跳小老師",
+        short_name: "跳跳小老師",
+        description: "跳跳陪你學數學和國文",
         theme_color: "#F3F6FB",
         background_color: "#F3F6FB",
         display: "standalone",

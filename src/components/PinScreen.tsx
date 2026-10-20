@@ -44,7 +44,7 @@ export default function PinScreen({ onSuccess }: PinScreenProps) {
         </div>
 
         <h1 className="text-2xl font-bold text-ink text-center mb-2">
-          數學小老師
+          跳跳小老師
         </h1>
         <p className="text-muted text-center mb-8">請輸入 PIN 碼</p>
 

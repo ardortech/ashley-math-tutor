@@ -4,7 +4,7 @@ import { z } from "zod";
 import {
   getTextbook,
   saveTextbook,
-  createBackup,
+  createBackupAsync,
   restoreBackup,
   getSolveLog,
   getTodayCount,
@@ -13,6 +13,11 @@ import {
   type BackupPayload,
   type Subject,
 } from "../lib/storage";
+import {
+  getAdminMode,
+  setAdminMode,
+  isAdminUrl,
+} from "../lib/chinese/dailySession";
 import { levelFromSolves } from "../lib/accessories";
 
 const TEXTBOOK_OPTIONS: Textbook[] = ["康軒", "南一", "翰林"];
@@ -24,8 +29,24 @@ const SolveEntrySchema = z.object({
   subject: z.enum(["math", "chinese"]).optional(),
 });
 
+const ChineseAnswerSchema = z.object({
+  questionId: z.string(),
+  timesSeen: z.number(),
+  timesWrong: z.number(),
+  lastAnswer: z.union([z.number(), z.string(), z.null()]),
+  lastSeen: z.string(),
+  lastCorrect: z.union([z.string(), z.null()]),
+});
+
+const FavoriteSchema = z.object({
+  id: z.string(),
+  subject: z.enum(["math", "chinese"]),
+  questionId: z.string(),
+  savedAt: z.string(),
+});
+
 const BackupSchema = z.object({
-  schemaVersion: z.union([z.literal(1), z.literal(2)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   pet: z.object({
     schemaVersion: z.literal(1),
     name: z.string(),
@@ -38,6 +59,8 @@ const BackupSchema = z.object({
   scoredProblemIds: z.array(z.string()),
   textbook: z.enum(["康軒", "南一", "翰林"]).optional().default("康軒"),
   exportedAt: z.string().optional(),
+  chineseAnswers: z.array(ChineseAnswerSchema).optional().default([]),
+  favorites: z.array(FavoriteSchema).optional().default([]),
 });
 
 function encodeBackup(data: BackupPayload): string {
@@ -86,8 +109,11 @@ export default function SettingsPage() {
     saveTextbook(val);
   };
 
-  const handleBackup = useCallback(() => {
-    const data = createBackup();
+  const [adminMode, setAdminModeState] = useState(getAdminMode);
+  const showAdminToggle = isAdminUrl() || adminMode;
+
+  const handleBackup = useCallback(async () => {
+    const data = await createBackupAsync();
     const code = encodeBackup(data);
     setBackupCode(code);
     setCopyMsg("");
@@ -104,8 +130,8 @@ export default function SettingsPage() {
     setTimeout(() => setCopyMsg(""), 3000);
   }, [backupCode]);
 
-  const handleDownload = useCallback(() => {
-    const data = createBackup();
+  const handleDownload = useCallback(async () => {
+    const data = await createBackupAsync();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -335,6 +361,30 @@ export default function SettingsPage() {
             </p>
           )}
         </section>
+
+        {/* Admin toggle — only visible with ?admin=1 */}
+        {showAdminToggle && (
+          <section className="rounded-2xl border border-pet/30 bg-pet-soft p-4">
+            <h2 className="text-base font-bold text-ink mb-2">大人測試</h2>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={adminMode}
+                onChange={(e) => {
+                  setAdminModeState(e.target.checked);
+                  setAdminMode(e.target.checked);
+                }}
+                className="w-5 h-5 rounded accent-pet"
+              />
+              <span className="text-sm text-ink">
+                包含未審核題目（大人測試用）
+              </span>
+            </label>
+            <p className="text-xs text-muted mt-2">
+              打開後國文練習會包含尚未確認的題目，未審核題目右上角會顯示「未審核」標籤
+            </p>
+          </section>
+        )}
       </div>
     </div>
   );
