@@ -248,3 +248,21 @@ Primary buttons are big (80–132px tall), rounded, with a solid 8–10px bottom
 7. **History & polish:** history list, topic counts, error handling, test on real iPad.
 
 **Testing:** keep a folder of ~15 sample problem photos (printed + handwritten, each topic) and run them through `/analyze` and `/validate` after every prompt change. Check: correct transcription, no answer leaks during guidance, language level, Taiwan terms.
+
+---
+
+## 10. Multi-subject architecture
+
+The app supports multiple subjects. Each subject has its own route namespace and home page.
+
+- **Subject type:** `"math" | "chinese"` (`Subject` in `src/lib/storage.ts`).
+- **Routes:**
+  - `/` — Landing page (subject picker, pet card, favorites).
+  - `/math` — Math home (capture button, stats, resume prompt). Sub-routes: `/math/capture`, `/math/confirm`, `/math/guided`, `/math/validate`, `/math/practice`.
+  - `/chinese` — Chinese home (C2+). Sub-routes TBD.
+  - Legacy routes (`/capture`, `/confirm`, `/guided`, `/validate`, `/practice`) redirect to `/math/*`, preserving `location.state` and query string.
+- **Shared scoring:** `recordSolve({ subject, problemId, topic, usedHints, snackAmount })` in `src/lib/scoring.ts` is the single entry point for both subjects. It handles duplicate prevention, solve log, pet state, accessories, and snacks.
+- **Solve log:** `SolveEntry.subject` field (`"math"` | `"chinese"`). Entries without `subject` (pre-C1 data) are treated as `"math"`.
+- **Counts:** `getTodayCount(subject?)` and `getWeekCount(subject?)` accept an optional subject filter.
+- **Backup:** `BackupPayload.schemaVersion` is `2`. Restoring a v1 backup auto-migrates `solveLog` entries to `subject: "math"`.
+- **Chinese plan:** see `docs/chinese-plan.md` for the full Chinese subject roadmap.
